@@ -1,0 +1,28 @@
+[project]
+name = "ml"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Your Name",email = "you@example.com"}
+]
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "marker-pdf>=1.10.2",
+    "torch>=2.2.0",
+    "torchvision",
+    "torchaudio",
+    "transformers",
+    "accelerate",
+    "bitsandbytes",  # QLoRA를 위한 양자화 라이브러리 [cite: 940, 970]
+    "vllm>=0.4.0",    # PagedAttention 추론 엔진 [cite: 951, 953]
+    "tqdm",
+    "pydantic>=2.0.0" # 데이터 검증용
+]
+
+[tool.poetry]
+# Poetry 2.0에서도 하위 호환성을 위해 명시해주는 것이 좋습니다.
+packages = [{include = "sft_pipeline"}]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
