@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "postgres": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-postgres", "postgresql://localhost/nietzsche_dev"],
+      "comment": "PostgreSQL DB 구성 후 활성화. DB URL을 실제 값으로 교체할 것."
+    }
+  }
+}

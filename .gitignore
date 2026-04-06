@@ -1,0 +1,96 @@
+# =====================
+# Python
+# =====================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+env/
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# =====================
+# Node.js / Next.js
+# =====================
+node_modules/
+.next/
+out/
+.npm
+.eslintcache
+*.tsbuildinfo
+
+# =====================
+# 환경 변수 (절대 커밋 금지)
+# =====================
+.env
+.env.*
+!.env.example
+
+# =====================
+# ML / 데이터
+# =====================
+# 원문 데이터 (용량 크고 저작권 문제)
+ml/data/raw/
+
+# 생성된 SFT 샘플 (중간 결과물)
+ml/data/sft/generated/
+ml/data/processed/
+
+# 최종 데이터셋은 필요 시 별도 관리 (주석 해제해서 사용)
+# ml/data/sft/final/
+
+# 모델 체크포인트 및 가중치 (용량 매우 큼)
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.ckpt
+*.gguf
+
+# Jupyter 체크포인트
+.ipynb_checkpoints/
+
+# =====================
+# Docker
+# =====================
+.docker/
+
+# =====================
+# IDE / 에디터
+# =====================
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# =====================
+# 로그 / 임시 파일
+# =====================
+*.log
+logs/
+tmp/
+temp/
+.cache/
+
+# =====================
+# Poetry
+# =====================
+# poetry.lock은 커밋 권장 (재현성 보장)
+# poetry.lock
+
+# =====================
+# pytest / coverage
+# =====================
+.pytest_cache/
+.coverage
+htmlcov/

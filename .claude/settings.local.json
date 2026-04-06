@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(PGPASSWORD=pass psql -h localhost -U user -d postgres -c \"\\\\l\")",
+      "Bash(docker ps:*)",
+      "Bash(docker exec:*)",
+      "Bash(ls -la /home/hch/nietzsche-project/apps/backend/.env*)"
+    ]
+  }
+}

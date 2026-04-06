@@ -1,0 +1,29 @@
+services:
+  # 관계형 DB (사용자 및 대화 기록 저장용)
+  db:
+    image: postgres:16
+    container_name: nietzsche-db
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: pass
+      POSTGRES_DB: nietzsche_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # 벡터 DB (니체 저서 임베딩 검색용)
+  qdrant:
+    image: qdrant/qdrant
+    container_name: nietzsche-vector
+    restart: always
+    ports:
+      - "6333:6333" # HTTP API
+      - "6334:6334" # gRPC API
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+volumes:
+  postgres_data:
+  qdrant_data:
