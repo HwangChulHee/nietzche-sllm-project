@@ -4,9 +4,8 @@ import { useCallback } from "react";
 import { useAppDispatch, useAppSelector } from "./useAppDispatch";
 import {
   addUserMessage,
-  appendToken,
+  appendDelta,
   finalizeAssistantMessage,
-  fetchRooms,
   setStreamingError,
   startAssistantMessage,
 } from "../store/chatSlice";
@@ -15,25 +14,24 @@ const API_BASE = "http://localhost:8000";
 
 export function useStreamingChat() {
   const dispatch = useAppDispatch();
-  const { token, currentRoomId, isStreaming } = useAppSelector((s) => s.chat);
+  const { currentConversationId, isStreaming } = useAppSelector((s) => s.chat);
 
   const sendMessage = useCallback(
     async (message: string) => {
-      if (!token || isStreaming || !message.trim()) return;
+      if (isStreaming || !message.trim()) return;
 
       dispatch(addUserMessage(message));
       dispatch(startAssistantMessage());
 
       try {
-        const res = await fetch(`${API_BASE}/api/v1/chat/`, {
+        const res = await fetch(`${API_BASE}/api/v1/chat`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             message,
-            ...(currentRoomId ? { room_id: currentRoomId } : {}),
+            ...(currentConversationId
+              ? { conversation_id: currentConversationId }
+              : {}),
           }),
         });
 
@@ -43,7 +41,7 @@ export function useStreamingChat() {
 
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
-        let roomId = currentRoomId ?? "";
+        let conversationId = currentConversationId ?? "";
         let buffer = "";
 
         while (true) {
@@ -58,15 +56,14 @@ export function useStreamingChat() {
             if (!line.startsWith("data: ")) continue;
             try {
               const event = JSON.parse(line.slice(6));
-              if (event.type === "init") {
-                roomId = event.room_id;
-              } else if (event.type === "token") {
-                dispatch(appendToken(event.text));
+              if (event.type === "metadata") {
+                conversationId = event.conversation_id;
+              } else if (event.type === "delta") {
+                dispatch(appendDelta(event.content));
               } else if (event.type === "done") {
-                dispatch(finalizeAssistantMessage({ roomId }));
-                dispatch(fetchRooms(token));
+                dispatch(finalizeAssistantMessage({ conversationId }));
               } else if (event.type === "error") {
-                dispatch(setStreamingError(event.text));
+                dispatch(setStreamingError(event.message));
               }
             } catch {
               // 파싱 실패 시 skip
@@ -78,7 +75,7 @@ export function useStreamingChat() {
         console.error("SSE 오류:", err);
       }
     },
-    [token, currentRoomId, isStreaming, dispatch],
+    [currentConversationId, isStreaming, dispatch],
   );
 
   return { sendMessage };
