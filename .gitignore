@@ -90,3 +90,9 @@ temp/
 .pytest_cache/
 .coverage
 htmlcov/
+
+
+# Claude Code
+.claude/worktrees/
+.claude/settings.local.json
+.claude/.session/

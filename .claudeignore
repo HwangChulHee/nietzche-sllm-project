@@ -1,0 +1,62 @@
+cd /workspace/nietzche-sllm-project
+
+cat > .claudeignore << 'EOF'
+# Claude Code 작업 차단 디렉토리/파일
+
+# Track 1 (데이터 파이프라인) — 사용자가 별도 세션에서 작업 중
+ml/
+
+# 데이터 파일들
+**/data/raw/
+**/data/extracted/
+**/data/chunks/
+**/data/refined/
+**/data/validated/
+**/data/sft/
+
+# 모델 가중치
+**/models/
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.ckpt
+*.gguf
+
+# 가상환경
+.venv/
+venv/
+**/node_modules/
+
+# 빌드 산출물
+**/.next/
+**/dist/
+**/build/
+__pycache__/
+*.pyc
+
+# Lock 파일 (토큰 폭탄)
+poetry.lock
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# 미디어
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.ico
+*.woff
+*.woff2
+
+# 환경 변수
+.env
+.env.local
+.env.production
+!.env.example
+EOF
+
+# 확인
+ls -la .claudeignore
