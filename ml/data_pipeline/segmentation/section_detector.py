@@ -3,16 +3,16 @@ Stage 2: 페이지 역할 감지 (섹션 분류).
 
 마커 기반 상태 기계로 각 페이지를 섹션 역할(PageRole)로 분류한다.
 
-상태 흐름:
-    SEEKING_PREFACE     ← 시작
-        ↓ "제2판 서문" 마커 발견
-    IN_PREFACE          ← 서문 본문 페이지들
-        ↓ 에머슨 마커 발견
+상태 흐름 (단순화 버전):
+    IN_PREFACE          ← 시작 (첫 페이지부터 서문으로 가정)
+        ↓ "시인과 현자" (에머슨) 마커 발견
     SEEKING_APPENDIX    ← 에머슨/독일어 속표지 통과 중
         ↓ "농담, 간계 그리고 복수" 마커 발견
     IN_APPENDIX         ← 부록 시 본문 페이지들
         ↓ "존재의 목적을 가르치는 교사" 마커 발견
     IN_MAIN_BODY        ← 본편 본문 페이지들
+
+주의: "제2판 서문" 마커는 사용하지 않음. 추출된 PDF가 이미 본문부터 시작함.
 """
 
 from enum import Enum
@@ -28,7 +28,6 @@ console = Console()
 class DetectorState(str, Enum):
     """섹션 감지 상태 기계의 상태."""
 
-    SEEKING_PREFACE = "seeking_preface"
     IN_PREFACE = "in_preface"
     SEEKING_APPENDIX = "seeking_appendix"
     IN_APPENDIX = "in_appendix"
@@ -50,9 +49,16 @@ def detect_sections(
     Returns:
         (role이 채워진 ExtractedPage 리스트, SectionMap)
     """
-    state = DetectorState.SEEKING_PREFACE
+    # 시작 상태: IN_PREFACE (첫 페이지가 곧 서문 첫 페이지)
+    state = DetectorState.IN_PREFACE
     page_roles: dict[int, PageRole] = {}
     classified_pages: list[ExtractedPage] = []
+
+    if verbose:
+        console.log(
+            f"[cyan]Initial state:[/cyan] {state.value} "
+            f"(첫 페이지부터 서문으로 가정)"
+        )
 
     for page in pages:
         text = page.clean_text
@@ -98,58 +104,59 @@ def _classify_page(
         2. 부록 시작 마커
         3. 독일어 속표지 마커
         4. 에머슨 속표지 마커
-        5. 서문 시작 마커
     """
     # 1. 본편 시작 마커 — 가장 우선순위 높음
-    # 어느 상태에서도 본편 마커가 등장하면 즉시 전환
     if jw.MAIN_BODY_START_MARKER in text and state != DetectorState.IN_MAIN_BODY:
-        _log_transition(state, DetectorState.IN_MAIN_BODY, page_num,
-                        f"main body marker: '{jw.MAIN_BODY_START_MARKER}'", verbose)
+        _log_transition(
+            state,
+            DetectorState.IN_MAIN_BODY,
+            page_num,
+            f"main body marker: '{jw.MAIN_BODY_START_MARKER}'",
+            verbose,
+        )
         return DetectorState.IN_MAIN_BODY, "main_body"
 
     # 2. 부록 시 시작 마커
     if jw.APPENDIX_COVER_MARKER in text:
-        _log_transition(state, DetectorState.IN_APPENDIX, page_num,
-                        f"appendix cover marker: '{jw.APPENDIX_COVER_MARKER}'", verbose)
+        _log_transition(
+            state,
+            DetectorState.IN_APPENDIX,
+            page_num,
+            f"appendix cover marker: '{jw.APPENDIX_COVER_MARKER}'",
+            verbose,
+        )
         return DetectorState.IN_APPENDIX, "appendix_cover"
 
     # 3. 독일어 원전 속표지
     if jw.GERMAN_COVER_MARKER in text:
-        # 상태 전환은 없음, 역할만 부여
         if verbose:
             console.log(f"  [dim]Page {page_num}:[/dim] german_cover (marker found)")
         # 보통 에머슨 다음에 오므로 상태는 SEEKING_APPENDIX 유지
-        next_state = DetectorState.SEEKING_APPENDIX if state == DetectorState.IN_PREFACE else state
+        next_state = (
+            DetectorState.SEEKING_APPENDIX
+            if state == DetectorState.IN_PREFACE
+            else state
+        )
         return next_state, "german_cover"
 
     # 4. 에머슨 속표지
     if jw.EMERSON_COVER_MARKER in text and state == DetectorState.IN_PREFACE:
-        _log_transition(state, DetectorState.SEEKING_APPENDIX, page_num,
-                        f"emerson cover marker: '{jw.EMERSON_COVER_MARKER}'", verbose)
+        _log_transition(
+            state,
+            DetectorState.SEEKING_APPENDIX,
+            page_num,
+            f"emerson cover marker: '{jw.EMERSON_COVER_MARKER}'",
+            verbose,
+        )
         return DetectorState.SEEKING_APPENDIX, "emerson_cover"
 
-    # 5. 서문 시작 마커
-    if jw.PREFACE_START_MARKER in text and state == DetectorState.SEEKING_PREFACE:
-        _log_transition(state, DetectorState.IN_PREFACE, page_num,
-                        f"preface marker: '{jw.PREFACE_START_MARKER}'", verbose)
-        return DetectorState.IN_PREFACE, "preface"
-
     # 마커 없음 — 현재 상태에 따라 역할 부여
-    return _role_from_state(state), _continuing_role(state)
-
-
-def _role_from_state(state: DetectorState) -> DetectorState:
-    """마커 없을 때는 상태 유지."""
-    return state
+    return state, _continuing_role(state)
 
 
 def _continuing_role(state: DetectorState) -> PageRole:
-    """현재 상태에서 마커 없는 페이지의 역할을 결정.
-
-    각 상태에서 '계속 같은 섹션이라고 가정'할 때의 역할.
-    """
+    """현재 상태에서 마커 없는 페이지의 역할을 결정."""
     mapping: dict[DetectorState, PageRole] = {
-        DetectorState.SEEKING_PREFACE: "unknown",
         DetectorState.IN_PREFACE: "preface",
         DetectorState.SEEKING_APPENDIX: "unknown",
         DetectorState.IN_APPENDIX: "appendix_body",
