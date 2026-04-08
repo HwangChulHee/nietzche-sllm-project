@@ -16,6 +16,7 @@ interface ChatState {
   currentConversationId: string | null;
   messages: Message[];
   isStreaming: boolean;
+  messagesLoading: boolean;
   error: string | null;
 }
 
@@ -25,6 +26,7 @@ const initialState: ChatState = {
   currentConversationId: null,
   messages: [],
   isStreaming: false,
+  messagesLoading: false,
   error: null,
 };
 
@@ -93,11 +95,21 @@ const chatSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    builder.addCase(fetchMessages.fulfilled, (state, action) => {
-      state.currentConversationId = action.payload.conversation_id;
-      state.messages = action.payload.messages;
-      state.isStreaming = false;
-    });
+    builder
+      .addCase(fetchMessages.pending, (state) => {
+        state.messagesLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchMessages.fulfilled, (state, action) => {
+        state.currentConversationId = action.payload.conversation_id;
+        state.messages = action.payload.messages;
+        state.isStreaming = false;
+        state.messagesLoading = false;
+      })
+      .addCase(fetchMessages.rejected, (state, action) => {
+        state.messagesLoading = false;
+        state.error = action.error.message ?? "메시지 로드 실패";
+      });
   },
 });
 

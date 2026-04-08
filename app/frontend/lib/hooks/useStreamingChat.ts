@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "./useAppDispatch";
 import {
   addUserMessage,
@@ -14,6 +15,7 @@ const API_BASE = "http://localhost:8000";
 
 export function useStreamingChat() {
   const dispatch = useAppDispatch();
+  const router = useRouter();
   const { currentConversationId, isStreaming } = useAppSelector((s) => s.chat);
 
   const sendMessage = useCallback(
@@ -62,6 +64,10 @@ export function useStreamingChat() {
                 dispatch(appendDelta(event.content));
               } else if (event.type === "done") {
                 dispatch(finalizeAssistantMessage({ conversationId }));
+                // 첫 대화인 경우 URL 업데이트
+                if (!currentConversationId && conversationId) {
+                  router.replace(`/chat/${conversationId}`);
+                }
               } else if (event.type === "error") {
                 dispatch(setStreamingError(event.message));
               }
@@ -75,7 +81,7 @@ export function useStreamingChat() {
         console.error("SSE 오류:", err);
       }
     },
-    [currentConversationId, isStreaming, dispatch],
+    [currentConversationId, isStreaming, dispatch, router],
   );
 
   return { sendMessage };
