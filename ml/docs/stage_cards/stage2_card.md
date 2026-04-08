@@ -77,9 +77,9 @@ poetry run python scripts/02_segment.py \
 
 ## 진행 상태
 - [x] 설계 합의 완료
-- [ ] schema.py 수정
-- [ ] books/joyful_science.py 작성
-- [ ] section_detector.py 작성
-- [ ] 02_segment.py 작성
-- [ ] 일부 PDF에서 검증
+- [x] schema.py 수정
+- [x] books/joyful_science.py 작성
+- [x] section_detector.py 작성
+- [x] 02_segment.py 작성
+- [x] 일부 PDF에서 검증
 - [ ] 전체 PDF에서 검증 (Day 2 후반)

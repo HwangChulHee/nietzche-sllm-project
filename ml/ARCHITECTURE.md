@@ -248,6 +248,7 @@ data/sft/joyful_science_sample_sft.jsonl
 ## 📝 갱신 기록
 
 - **2026-04-07**: 초안 작성, Stage 1 완료, Stage 2 진행 중
+- **2026-04-08**: Stage 2 완료. PageRole, SectionMap, ExtractedPage.role 추가. books/joyful_science.py 신설.
 
 ---
 

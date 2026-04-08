@@ -134,9 +134,9 @@ flowchart TB
     classDef file fill:#fce7f3,stroke:#db2777,stroke-width:1px,color:#000
     classDef start fill:#fce7f3,stroke:#db2777,stroke-width:2px,color:#000
 
-    class S1 done
-    class S2 current
-    class S3,S4,S5,S6,S7,Train pending
+    class S1,S2 done
+    class S3 current
+    class S4,S5,S6,S7,Train pending
     class S1_IN,S1_OUT,S2_IN,S2_OUT1,S2_OUT2,S3_IN,S3_OUT,S4_IN,S4_OUT,S5_IN,S5_OUT,S6_IN,S6_OUT,S7_IN,S7_OUT,T_IN,T_OUT io
     class S1_F1,S1_F2,S1_F3,S2_F1,S2_F2,S2_F3,S3_F1,S3_F2,S4_F1,S4_F2,S4_F3,S5_F1,S5_F2,S5_F3,S5_F4,S6_F1,S6_F2,S7_F1,S7_F2,T_F1 file
     class Start,Final start
