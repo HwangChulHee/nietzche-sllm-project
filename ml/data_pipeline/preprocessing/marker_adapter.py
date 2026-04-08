@@ -5,13 +5,18 @@ Marker가 출력한 JSON (Document → Page → Block 트리)을
 파이프라인 표준 형식인 ExtractedPage 리스트로 변환한다.
 
 Marker의 블록 타입과 우리 파이프라인의 매핑:
-- Text         → 본문 블록 (콘텐츠)
-- SectionHeader → 본문 블록 (콘텐츠, 섹션 헤더 마킹)
+- Text          → 본문 블록 (콘텐츠). 단, 마침표 없는 1~3자리 숫자는 줄번호 노이즈.
+- SectionHeader → 본문 블록 (콘텐츠). 아포리즘 경계 신호로 활용.
+- ListItem      → 본문 블록 (콘텐츠)
+- TextInlineMath → 본문 블록 (콘텐츠)
 - PageHeader    → 노이즈 (자동 제거)
 - PageFooter    → 노이즈 (자동 제거)
 - 빈 텍스트     → 노이즈
 
-추가로 좌표 기반 노이즈 필터를 적용해서 줄번호 같은 것도 제거한다.
+핵심 변경 (v2):
+- TextBlock에 block_type 보존 → Stage 3가 SectionHeader/번호 블록을 활용 가능
+- 줄번호 노이즈 필터 추가 (Marker가 못 잡은 "5", "10", "15", "20" 등)
+- SectionHeader는 무조건 콘텐츠로 신뢰 (Marker가 명시적으로 헤더로 분류한 것)
 """
 
 import re
@@ -38,26 +43,39 @@ CONTENT_BLOCK_TYPES = {
 NOISE_BLOCK_TYPES = {
     "PageHeader",
     "PageFooter",
-    "Footnote",  # 각주는 별도 처리 필요시 추가
+    "Footnote",
 }
+
+# 줄번호 노이즈 패턴: 마침표 없는 1~3자리 숫자
+# (아포리즘 번호는 거의 항상 "2.", "47." 처럼 마침표가 붙음)
+LINE_NUMBER_PATTERN = re.compile(r"^\d{1,3}$")
 
 
 def _clean_html(html: str) -> str:
-    """Marker 출력의 HTML 태그를 제거하고 텍스트만 추출.
-
-    Marker는 텍스트를 `<p block-type="Text">...</p>` 같은
-    HTML로 감싸서 반환한다. 태그를 제거하고 텍스트만 남긴다.
-    각주 태그 `<sup>...</sup>` 같은 것도 제거.
-    """
+    """Marker 출력의 HTML 태그를 제거하고 텍스트만 추출."""
     if not html:
         return ""
-    # HTML 엔티티 디코딩 (기본적인 것만)
     text = html
     text = text.replace("&lt;", "<").replace("&gt;", ">").replace("&amp;", "&")
     text = text.replace("&quot;", '"').replace("&#39;", "'")
-    # HTML 태그 제거
     text = re.sub(r"<[^>]+>", "", text)
     return text.strip()
+
+
+def _is_line_number_noise(block_type: str, text: str) -> bool:
+    """줄번호로 보이는 노이즈 블록인지 판단.
+
+    조건:
+    - SectionHeader가 아니어야 함 (SectionHeader '14', '24'는 진짜 아포리즘 번호)
+    - 마침표가 없는 1~3자리 순수 숫자
+
+    예: "5", "10", "15", "20" → True (줄번호)
+    예: "2.", "47." → False (아포리즘 번호, 마침표 있음)
+    예: SectionHeader "14" → False (Marker가 헤더로 분류했으므로 신뢰)
+    """
+    if block_type == "SectionHeader":
+        return False
+    return bool(LINE_NUMBER_PATTERN.match(text))
 
 
 def _extract_page_blocks(
@@ -66,7 +84,6 @@ def _extract_page_blocks(
     """Marker의 Page 노드에서 TextBlock 리스트를 추출."""
     blocks: list[TextBlock] = []
 
-    # 페이지 크기 (bbox에서 추출)
     page_bbox = page_node.get("bbox", [0, 0, 0, 0])
     page_width = float(page_bbox[2]) if len(page_bbox) >= 4 else 0.0
     page_height = float(page_bbox[3]) if len(page_bbox) >= 4 else 0.0
@@ -79,7 +96,6 @@ def _extract_page_blocks(
         text = _clean_html(raw_text)
         bbox = child.get("bbox", [0.0, 0.0, 0.0, 0.0])
 
-        # bbox는 [x0, y0, x1, y1] 형태여야 함
         if len(bbox) != 4:
             bbox = [0.0, 0.0, 0.0, 0.0]
         bbox_tuple = (
@@ -89,11 +105,11 @@ def _extract_page_blocks(
             float(bbox[3]),
         )
 
-        # 노이즈 판정
+        # 노이즈 판정 (순서가 중요!)
         is_noise = False
         noise_reason: str | None = None
 
-        # 1. 명시적 노이즈 블록 타입
+        # 1. 명시적 노이즈 블록 타입 (PageHeader/Footer)
         if block_type in NOISE_BLOCK_TYPES:
             is_noise = True
             noise_reason = f"marker_{block_type.lower()}"
@@ -103,7 +119,13 @@ def _extract_page_blocks(
             is_noise = True
             noise_reason = "empty_text"
 
-        # 3. 알 수 없는 블록 타입은 일단 노이즈로
+        # 3. 줄번호 노이즈 (마침표 없는 1~3자리 숫자)
+        #    SectionHeader는 통과시킴 (헤더로 분류된 숫자는 진짜 아포리즘 번호)
+        elif _is_line_number_noise(block_type, text):
+            is_noise = True
+            noise_reason = "line_number"
+
+        # 4. 알 수 없는 블록 타입은 일단 노이즈로
         elif block_type not in CONTENT_BLOCK_TYPES:
             is_noise = True
             noise_reason = f"unknown_type_{block_type}"
@@ -114,6 +136,7 @@ def _extract_page_blocks(
                 block_num=block_idx,
                 bbox=bbox_tuple,
                 text=text,
+                block_type=block_type,
                 is_noise=is_noise,
                 noise_reason=noise_reason,
             )
@@ -130,8 +153,7 @@ def marker_json_to_pages(
 
     Args:
         marker_data: Marker가 출력한 JSON (Document 노드 루트)
-        apply_coordinate_filter: True면 좌표 기반 노이즈 필터(줄번호 등)를
-            추가로 적용
+        apply_coordinate_filter: True면 좌표 기반 노이즈 필터를 추가로 적용
 
     Returns:
         ExtractedPage 리스트 (페이지 순서대로)
@@ -172,7 +194,7 @@ def marker_json_to_pages(
             clean_text=clean_text,
         )
 
-        # 좌표 기반 추가 필터 (줄번호 등 — Marker가 못 잡은 것들)
+        # 좌표 기반 추가 필터 (보존: 기존 로직 유지)
         if apply_coordinate_filter:
             page = filter_page(page)
 
@@ -182,14 +204,7 @@ def marker_json_to_pages(
 
 
 def load_marker_json(json_path: str | Path) -> dict[str, Any]:
-    """Marker JSON 파일을 로드.
-
-    Args:
-        json_path: Marker가 출력한 *.json 파일 경로
-
-    Returns:
-        파싱된 Marker JSON 딕셔너리
-    """
+    """Marker JSON 파일을 로드."""
     import json
 
     json_path = Path(json_path)

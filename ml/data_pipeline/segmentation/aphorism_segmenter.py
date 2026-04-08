@@ -1,17 +1,20 @@
 """
 Stage 3: 페이지를 아포리즘 단위 청크로 분할.
 
-섹션마다 다른 분할 전략을 사용한다:
+섹션마다 다른 분할 전략:
 - 서문 (preface): 짧은 숫자 블록 ("1.", "2.", ...)으로 절 분리
 - 부록 시 (appendix_body): 짧은 숫자 블록으로 시 분리
-- 본편 (main_body): 3중 휴리스틱
-    1. 명시적 번호 블록 ("2." 등)
-    2. SectionHeader (Phase 2에서 추가, 현재는 미사용)
-    3. 제목.— 패턴 ("지적 양심.—...", "고귀와 비속.—...")
+- 본편 (main_body): 3중 신호 (block_type 기반)
+    1. SectionHeader 블록 (Marker가 명시적으로 헤더로 분류) → 'section_header'
+    2. Text 블록 "N." 패턴 → 'number_block'
+    3. title.— 패턴 (fallback) → 'title_pattern'
 
-분할 철학: Type B (over-segmentation)을 Type A (under-segmentation)보다 선호.
-- Over: 두 청크가 같은 영어 아포리즘에 매칭되면 Stage 4에서 병합 (쉬움)
-- Under: 한 청크가 두 영어 아포리즘에 매칭되면 분리 위치 찾기 어려움
+핵심 변경 (v2):
+- block_type 정보를 본편 분할에 활용
+- Marker가 잘 분류한 경계(SectionHeader)를 1순위 신호로 사용
+- regex 의존 최소화, 단조 증가 검증으로 false positive 방지
+
+분할 철학: Type B (over-seg) > Type A (under-seg).
 """
 
 import re
@@ -29,24 +32,36 @@ console = Console()
 # 분할 신호 정규식
 # =====================
 
-# 신호 1: 명시적 번호 블록 ("1.", "2.", ..., "383.")
-#   - 짧은 블록 (5자 이하)
-#   - 순수 "숫자."
+# 명시적 번호 블록: "1.", "2.", ..., "383."
 NUMBER_BLOCK_PATTERN = re.compile(r"^(\d+)\.$")
 
-# 신호 3: 본편 제목.— 패턴
-#   - 짧은 제목 (20자 이하) + 마침표 + 줄표(— 또는 –) + 공백
-#   - 예: "지적 양심. —", "고귀와 비속.—", "존재의 목적을 가르치는 교사.—"
-#   - "[^—\n.]" 으로 줄표/줄바꿈/마침표가 제목 안에 안 들어오게 함
+# SectionHeader 번호 패턴: "7.", "14" (마침표 있어도 없어도)
+SECTION_HEADER_NUMBER_PATTERN = re.compile(r"^(\d+)\.?$")
+
+# 본편 제목.— 패턴 (fallback)
 TITLE_DASH_PATTERN = re.compile(r"^([^—\n.]{1,20})\.\s*[—–]\s+")
 
 
 def _parse_number_block(text: str) -> int | None:
-    """블록 텍스트가 명시적 번호인지 검사. 맞으면 번호 반환, 아니면 None."""
+    """블록 텍스트가 명시적 번호 'N.' 인지 검사."""
     text = text.strip()
     if len(text) > 5:
         return None
     m = NUMBER_BLOCK_PATTERN.match(text)
+    if m:
+        return int(m.group(1))
+    return None
+
+
+def _parse_section_header_number(text: str) -> int | None:
+    """SectionHeader 텍스트에서 숫자 추출 (마침표 있어도 없어도).
+
+    예: "7." → 7, "14" → 14, "폭력배의 금언." → None
+    """
+    text = text.strip()
+    if len(text) > 5:
+        return None
+    m = SECTION_HEADER_NUMBER_PATTERN.match(text)
     if m:
         return int(m.group(1))
     return None
@@ -59,13 +74,22 @@ def _matches_title_pattern(text: str) -> bool:
     return bool(TITLE_DASH_PATTERN.match(text))
 
 
+def _get_max_book_number(book_module) -> int:
+    """책 모듈에서 본편 최대 번호 추출 (monotonic check용)."""
+    if hasattr(book_module, "BOOK_RANGES"):
+        ranges = book_module.BOOK_RANGES
+        if ranges:
+            return max(end for _, (_, end) in ranges.items())
+    return 1000
+
+
 # =====================
 # 공통 헬퍼
 # =====================
 
 
 def _content_blocks(page: ExtractedPage) -> list:
-    """노이즈 아닌 블록만 반환 (텍스트가 비어있지 않은 것)."""
+    """노이즈 아닌 블록만 반환."""
     return [b for b in page.blocks if not b.is_noise and b.text.strip()]
 
 
@@ -81,7 +105,7 @@ def _make_chunk_id(book_slug: str, section_type: str, index: int) -> str:
 
 
 # =====================
-# 서문 분할
+# 서문 분할 (변경 없음)
 # =====================
 
 
@@ -119,7 +143,6 @@ def segment_preface(
         for block in _content_blocks(page):
             number = _parse_number_block(block.text)
             if number is not None:
-                # 새 절 시작
                 emit()
                 current_number = number
                 current_text = []
@@ -130,25 +153,19 @@ def segment_preface(
                     if page.page_num not in current_pages:
                         current_pages.append(page.page_num)
 
-    # 마지막 절
     emit()
-
     return chunks
 
 
 # =====================
-# 부록 시 분할
+# 부록 시 분할 (변경 없음)
 # =====================
 
 
 def segment_appendix(
     pages: list[ExtractedPage], book_slug: str
 ) -> list[Chunk]:
-    """부록 시 페이지들을 시 단위 청크로 분할.
-
-    분할 신호: 짧은 숫자 블록 ("1.", "2.", ..., "63.")
-    서문과 동일한 알고리즘이지만 section_type만 다름.
-    """
+    """부록 시 페이지들을 시 단위 청크로 분할."""
     chunks: list[Chunk] = []
     current_number: int | None = None
     current_text: list[str] = []
@@ -187,12 +204,11 @@ def segment_appendix(
                         current_pages.append(page.page_num)
 
     emit()
-
     return chunks
 
 
 # =====================
-# 본편 분할 (가장 까다로움)
+# 본편 분할 (대폭 재작성: block_type 활용)
 # =====================
 
 
@@ -202,21 +218,31 @@ def segment_main_body(
     """본편 페이지들을 아포리즘 단위 청크로 분할.
 
     분할 신호 (우선순위 순):
-    1. 명시적 번호 블록 ("2." 등) → split_signal="number_block"
-    2. 제목.— 패턴 ("지적 양심.—" 등) → split_signal="title_pattern"
+    1. SectionHeader 블록 (Marker가 명시적으로 헤더로 분류)
+       → split_signal='section_header'
+       예: SectionHeader "7." → 아포리즘 #7 시작
+       예: SectionHeader "14" → 아포리즘 #14 시작 (마침표 없어도 신뢰)
+    2. Text 블록 "N." 패턴 → split_signal='number_block'
+       예: Text "2." → 아포리즘 #2 시작
+    3. title.— 패턴 (fallback for missing numbers)
+       → split_signal='title_pattern'
+       단, 막 boundary가 시작된 직후(current_text 비어있음)면 무시
+       (안 그러면 number 정보를 덮어씀)
 
-    Marker가 본편 1번, 3번처럼 번호 없는 케이스를 잡지 못하므로
-    신호 2 (제목 패턴)이 핵심. 약간의 over-segmentation을 허용해서
-    Stage 4 영어 Anchor 매핑에서 보정.
+    Monotonic check:
+    - 책 범위(1~max) 밖이면 거부
+    - 직전 번호보다 작거나, 너무 큰 점프(>50)면 거부
     """
     chunks: list[Chunk] = []
-
-    # 현재 청크 누적용 상태
     current_text: list[str] = []
     current_pages: list[int] = []
     current_signal: str | None = None
     current_number: int | None = None
-    chunk_index = 0  # 본편 청크 순서 (ID 생성용)
+    chunk_index = 0
+
+    # Monotonic check 상태
+    last_accepted_number: int = 0
+    max_book_number = _get_max_book_number(jw)
 
     def emit() -> None:
         nonlocal chunk_index
@@ -229,7 +255,7 @@ def segment_main_body(
                 id=_make_chunk_id(book_slug, "aphorism", chunk_index),
                 book_slug=book_slug,
                 section_type="aphorism",
-                unit_number=current_number,  # 명시적 번호 있으면 채움, 없으면 None
+                unit_number=current_number,
                 text_ko_raw=text,
                 char_count_ko=len(text),
                 source_pages=sorted(set(current_pages)),
@@ -238,48 +264,85 @@ def segment_main_body(
             )
         )
 
+    def is_valid_number(n: int) -> bool:
+        """감지된 번호가 책 범위 내이고 단조 증가하는지."""
+        if n < 1 or n > max_book_number:
+            return False
+        if n < last_accepted_number:
+            return False  # 역행 거부
+        if n > last_accepted_number + 50:
+            return False  # 너무 큰 점프 거부
+        return True
+
+    def start_new_chunk(
+        signal: str,
+        number: int | None,
+        page_num: int,
+        initial_text: str | None = None,
+    ) -> None:
+        nonlocal current_text, current_pages, current_signal, current_number
+        nonlocal last_accepted_number
+        emit()
+        current_text = [initial_text] if initial_text else []
+        current_pages = [page_num]
+        current_signal = signal
+        current_number = number
+        if number is not None:
+            last_accepted_number = number
+
+    def append_to_current(text: str, page_num: int) -> None:
+        nonlocal current_text, current_pages, current_signal
+        if not current_text and current_signal is None:
+            current_signal = "first_chunk"
+        current_text.append(text)
+        if page_num not in current_pages:
+            current_pages.append(page_num)
+
     for page in pages:
         for block in _content_blocks(page):
             text = block.text
+            bt = block.block_type
 
-            # 신호 1: 명시적 번호 블록
-            number = _parse_number_block(text)
-            if number is not None:
-                # 새 아포리즘 시작
-                emit()
-                current_text = []
-                current_pages = [page.page_num]
-                current_signal = "number_block"
-                current_number = number
-                # 번호 블록 자체는 본문에 포함하지 않음
+            # === 신호 1: SectionHeader ===
+            if bt == "SectionHeader":
+                n = _parse_section_header_number(text)
+                if n is not None and is_valid_number(n):
+                    # 새 아포리즘 (헤더 텍스트 자체는 본문에 포함하지 않음)
+                    start_new_chunk("section_header", n, page.page_num)
+                    continue
+                # SectionHeader지만 숫자 아니거나 invalid → 본문 일부로 취급
+                append_to_current(text, page.page_num)
                 continue
 
-            # 신호 3: 제목.— 패턴
-            if _matches_title_pattern(text):
-                # 새 아포리즘 시작
-                emit()
-                current_text = [text]  # 제목 블록도 본문에 포함
-                current_pages = [page.page_num]
-                current_signal = "title_pattern"
-                current_number = None
-                continue
+            # === 신호 2: Text 블록 "N." ===
+            if bt == "Text":
+                n = _parse_number_block(text)
+                if n is not None and is_valid_number(n):
+                    # 새 아포리즘 (번호 텍스트는 본문에 포함하지 않음)
+                    start_new_chunk("number_block", n, page.page_num)
+                    continue
 
-            # 분할 신호 아님 → 현재 청크에 추가
-            if not current_text and current_signal is None:
-                # 첫 청크 시작 (신호 없이)
-                current_signal = "first_chunk"
-            current_text.append(text)
-            if page.page_num not in current_pages:
-                current_pages.append(page.page_num)
+                # === 신호 3: title.— 패턴 (fallback) ===
+                # 단, 막 boundary가 시작된 직후라면 무시
+                # (number_block 직후 첫 본문이 title 패턴일 수 있음)
+                if _matches_title_pattern(text) and current_text:
+                    start_new_chunk(
+                        "title_pattern",
+                        None,
+                        page.page_num,
+                        initial_text=text,
+                    )
+                    continue
 
-    # 마지막 청크
+            # === 경계 아님 → 현재 청크에 추가 ===
+            append_to_current(text, page.page_num)
+
     emit()
-
     return chunks
 
 
 # =====================
-# 메인 진입점
+# 메인 진입점 (변경 없음)
 # =====================
 
 
@@ -289,26 +352,13 @@ def segment_pages(
     book_slug: str = jw.BOOK_SLUG,
     verbose: bool = True,
 ) -> list[Chunk]:
-    """전체 페이지를 섹션별로 분할해 청크 리스트로 반환.
-
-    Args:
-        pages: Stage 2 출력 (annotated, role 채워진 페이지들)
-        section_map: Stage 2 출력 (섹션별 페이지 번호)
-        book_slug: 책 식별자
-        verbose: True면 진행 로그 출력
-
-    Returns:
-        Chunk 리스트 (서문 → 부록 → 본편 순)
-    """
-    # 페이지를 page_num으로 인덱싱
+    """전체 페이지를 섹션별로 분할해 청크 리스트로 반환."""
     page_by_num: dict[int, ExtractedPage] = {p.page_num: p for p in pages}
 
-    # 섹션별 페이지 번호 (Stage 2가 채운 sections 사용)
     preface_page_nums = section_map.sections.get("preface", [])
     appendix_page_nums = section_map.sections.get("appendix_body", [])
     main_page_nums = section_map.sections.get("main_body", [])
 
-    # 페이지 객체 리스트로 변환
     preface_pages = [page_by_num[n] for n in sorted(preface_page_nums) if n in page_by_num]
     appendix_pages = [page_by_num[n] for n in sorted(appendix_page_nums) if n in page_by_num]
     main_pages = [page_by_num[n] for n in sorted(main_page_nums) if n in page_by_num]
@@ -321,21 +371,18 @@ def segment_pages(
 
     all_chunks: list[Chunk] = []
 
-    # 1. 서문
     if preface_pages:
         preface_chunks = segment_preface(preface_pages, book_slug)
         all_chunks.extend(preface_chunks)
         if verbose:
             console.log(f"  [green]✓[/green] preface: {len(preface_chunks)} chunks")
 
-    # 2. 부록 시
     if appendix_pages:
         appendix_chunks = segment_appendix(appendix_pages, book_slug)
         all_chunks.extend(appendix_chunks)
         if verbose:
             console.log(f"  [green]✓[/green] appendix: {len(appendix_chunks)} chunks")
 
-    # 3. 본편
     if main_pages:
         main_chunks = segment_main_body(main_pages, book_slug)
         all_chunks.extend(main_chunks)
