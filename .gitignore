@@ -101,3 +101,7 @@ ml/v2_data/
 
 # v2 generated data (large)
 ml/v2_data/
+
+
+# finetune
+ml/finetune/unsloth_compiled_cache/
