@@ -1,0 +1,17 @@
+[project]
+name = "nietzsche-finetune"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "황철희",email = "kum15479@example.com"}
+]
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "unsloth @ git+https://github.com/unslothai/unsloth.git",
+    "wandb (>=0.25.1,<0.26.0)"
+]
+package-mode = false
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
