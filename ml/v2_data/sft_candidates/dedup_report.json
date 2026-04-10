@@ -1,0 +1,21 @@
+{
+  "input": 2728,
+  "minhash_removed": 0,
+  "embed_removed_total": 3,
+  "embed_rule1_a_hard": 0,
+  "embed_rule2_q_and_a": 3,
+  "final": 2725,
+  "final_avg_score": 0.8591804281345566,
+  "final_grades": {
+    "A": 1726,
+    "B": 825,
+    "C": 162,
+    "F": 12
+  },
+  "input_grades": {
+    "A": 1726,
+    "B": 828,
+    "C": 162,
+    "F": 12
+  }
+}

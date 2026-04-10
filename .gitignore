@@ -97,11 +97,13 @@ htmlcov/
 .claude/settings.local.json
 .claude/.session/
 # v2 generated data (large)
-ml/v2_data/
 
 # v2 generated data (large)
-ml/v2_data/
 
 
 # finetune
 ml/finetune/unsloth_compiled_cache/
+
+# finetune outputs (LoRA checkpoints, too large)
+ml/finetune/outputs/
+ml/finetune/wandb/

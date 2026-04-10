@@ -1,0 +1,18 @@
+{
+  "input": 2780,
+  "kept": 2728,
+  "discarded": 52,
+  "discard_breakdown": {
+    "discard_length": 12,
+    "discard_plagiarism": 33,
+    "discard_invalid_concept:amor_fati": 1,
+    "discard_invalid_concept:perspective": 1,
+    "discard_comfort": 5
+  },
+  "fixes": {
+    "concept_fixed:self-overcoming-health→self_overcoming_health": 2,
+    "concept_fixed:value-creation→value_creation": 1,
+    "concept_fixed:self_overcoming→self_overcoming_health": 1,
+    "pattern_fixed:reflection_refframing→reflection_reframing": 2
+  }
+}

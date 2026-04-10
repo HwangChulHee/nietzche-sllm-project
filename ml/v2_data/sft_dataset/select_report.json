@@ -1,0 +1,91 @@
+{
+  "input": 2725,
+  "accepted": 2551,
+  "rejected": 174,
+  "train": 2413,
+  "eval": 138,
+  "train_avg_score": 0.8805912418842382,
+  "eval_avg_score": 0.7705314009661836,
+  "groups": 85,
+  "small_groups_to_train": 34,
+  "train_dist": {
+    "voice": {
+      "contemplative_aphorism": 992,
+      "polemical_sharp": 872,
+      "hammer_intensified": 549
+    },
+    "question_type": {
+      "existential_question": 1456,
+      "philosophical_question": 807,
+      "biographical_question": 150
+    },
+    "response_pattern": {
+      "reflection_reframing": 826,
+      "misconception_correction": 594,
+      "aphorism": 302,
+      "diagnostic": 214,
+      "self_narrative": 143,
+      "contrast": 128,
+      "tension_escalation": 126,
+      "philosophical_explanation": 80
+    },
+    "use_case": {
+      "existential+philosophical": 1657,
+      "all": 627,
+      "philosophical": 47,
+      "existential+biographical": 37,
+      "existential": 33,
+      "biographical": 9,
+      "philosophical+biographical": 3
+    },
+    "difficulty": {
+      "medium": 1507,
+      "easy": 476,
+      "hard": 430
+    },
+    "source": {
+      "JW": 992,
+      "BGE": 691,
+      "TI": 388,
+      "GM": 181,
+      "EH": 161
+    },
+    "grade": {
+      "A": 1710,
+      "B": 703
+    }
+  },
+  "eval_dist": {
+    "voice": {
+      "contemplative_aphorism": 55,
+      "polemical_sharp": 51,
+      "hammer_intensified": 32
+    },
+    "question_type": {
+      "existential_question": 83,
+      "philosophical_question": 45,
+      "biographical_question": 10
+    },
+    "response_pattern": {
+      "reflection_reframing": 45,
+      "misconception_correction": 32,
+      "aphorism": 17,
+      "diagnostic": 14,
+      "self_narrative": 9,
+      "tension_escalation": 8,
+      "contrast": 7,
+      "philosophical_explanation": 6
+    },
+    "use_case": {
+      "existential+philosophical": 87,
+      "all": 41,
+      "philosophical": 4,
+      "existential+biographical": 3,
+      "existential": 3
+    },
+    "grade": {
+      "B": 122,
+      "A": 16
+    }
+  }
+}
