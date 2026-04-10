@@ -105,5 +105,21 @@ htmlcov/
 ml/finetune/unsloth_compiled_cache/
 
 # finetune outputs (LoRA checkpoints, too large)
-ml/finetune/outputs/
+# finetune outputs — 전체 무시 대신 하위 디렉토리별로 무시 (stage_b는 예외)
+ml/finetune/outputs/nietzsche-lora-31b/
+ml/finetune/outputs/merged/
 ml/finetune/wandb/
+
+# =====================
+# 예외: 실험 결과 및 로그 (발표/재현용 필수)
+# =====================
+# Stage B 응답 생성 결과
+!ml/finetune/outputs/stage_b/
+!ml/finetune/outputs/stage_b/*.jsonl
+!ml/finetune/outputs/stage_b/*.json
+!ml/finetune/outputs/stage_b_test/
+!ml/finetune/outputs/stage_b_test/*.jsonl
+
+# Stage B 실행 로그 (수 MB, 디버깅/재현용)
+!ml/finetune/logs/
+!ml/finetune/logs/*.log
