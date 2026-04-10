@@ -1,0 +1,58 @@
+`torch_dtype` is deprecated! Use `dtype` instead!
+🦥 Unsloth: Will patch your computer to enable 2x faster free finetuning.
+Unsloth: Your Flash Attention 2 installation seems to be broken. Using Xformers instead. No performance changes will be seen.
+🦥 Unsloth Zoo will now patch everything to make training faster!
+============================================================
+Test B-1: Merge epoch1 LoRA into Gemma 4 31B base
+============================================================
+
+설정:
+  base:       google/gemma-4-31B-it
+  checkpoint: /workspace/nietzche-sllm-project/ml/finetune/outputs/nietzsche-lora-31b/checkpoint-144
+  output:     /workspace/nietzche-sllm-project/ml/finetune/outputs/merged/epoch1
+
+체크포인트 내용:
+  adapter_config.json: OK
+  adapter_model.safetensors: OK
+
+[1] Loading base model (CPU, bf16)...
+    ※ CPU 로드는 GPU 메모리 안 씀. 시간은 걸리지만 안전.
+Loading weights:   0%|                                                               | 0/1188 [00:00<?, ?it/s]Loading weights:  11%|█████▎                                             | 125/1188 [00:00<00:00, 1242.17it/s]Loading weights:  21%|██████████▉                                         | 250/1188 [00:00<00:01, 627.86it/s]Loading weights:  28%|██████████████▍                                     | 329/1188 [00:00<00:01, 593.27it/s]Loading weights:  33%|█████████████████▍                                  | 397/1188 [00:00<00:01, 539.05it/s]Loading weights:  39%|████████████████████▍                               | 468/1188 [00:00<00:01, 518.27it/s]Loading weights:  44%|██████████████████████▉                             | 523/1188 [00:00<00:01, 512.69it/s]Loading weights:  50%|█████████████████████████▊                          | 591/1188 [00:01<00:01, 515.38it/s]Loading weights:  54%|████████████████████████████▏                       | 644/1188 [00:01<00:01, 398.90it/s]Loading weights:  58%|██████████████████████████████▍                     | 694/1188 [00:01<00:01, 420.62it/s]Loading weights:  64%|█████████████████████████████████                   | 756/1188 [00:01<00:00, 452.33it/s]Loading weights:  70%|████████████████████████████████████▏               | 826/1188 [00:01<00:00, 488.15it/s]Loading weights:  77%|███████████████████████████████████████▉            | 913/1188 [00:01<00:00, 564.46it/s]Loading weights:  83%|██████████████████████████████████████████▉         | 981/1188 [00:01<00:00, 592.22it/s]Loading weights:  90%|█████████████████████████████████████████████▊     | 1066/1188 [00:01<00:00, 649.30it/s]Loading weights:  95%|████████████████████████████████████████████████▋  | 1133/1188 [00:02<00:00, 635.54it/s]Loading weights: 100%|███████████████████████████████████████████████████| 1188/1188 [00:02<00:00, 570.59it/s]
+    ✓ Base loaded in 14.0s
+    Model class: Gemma4ForConditionalGeneration
+    Num parameters: 31.3B
+
+[2] Loading LoRA adapter from checkpoint...
+    ✗ FAILED: ValueError: Target module Gemma4ClippableLinear(
+  (linear): Linear(in_features=1152, out_features=1152, bias=False)
+) is not supported. Currently, only the following modules are supported: `torch.nn.Linear`, `torch.nn.Embedding`, `torch.nn.Conv1d`, `torch.nn.Conv2d`, `torch.nn.Conv3d`, `transformers.pytorch_utils.Conv1D`, `torch.nn.MultiheadAttention.`.
+
+=== peft 경로 실패 ===
+Unsloth fallback으로 전환 필요:
+  from unsloth import FastLanguageModel
+  model, tok = FastLanguageModel.from_pretrained('/workspace/nietzche-sllm-project/ml/finetune/outputs/nietzsche-lora-31b/checkpoint-144', max_seq_length=1024)
+  model.save_pretrained_merged('/workspace/nietzche-sllm-project/ml/finetune/outputs/merged/epoch1', tok)
+Traceback (most recent call last):
+  File "/workspace/nietzche-sllm-project/ml/finetune/scripts/test_b1_merge_epoch1.py", line 93, in <module>
+    model = PeftModel.from_pretrained(base, CHECKPOINT)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/nietzche-sllm-project/ml/finetune/.venv/lib/python3.12/site-packages/peft/peft_model.py", line 560, in from_pretrained
+    model = MODEL_TYPE_TO_PEFT_MODEL_MAPPING[config.task_type](
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/nietzche-sllm-project/ml/finetune/.venv/lib/python3.12/site-packages/peft/peft_model.py", line 1885, in __init__
+    super().__init__(model, peft_config, adapter_name, **kwargs)
+  File "/workspace/nietzche-sllm-project/ml/finetune/.venv/lib/python3.12/site-packages/peft/peft_model.py", line 129, in __init__
+    self.base_model = cls(model, {adapter_name: peft_config}, adapter_name)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/nietzche-sllm-project/ml/finetune/.venv/lib/python3.12/site-packages/peft/tuners/tuners_utils.py", line 298, in __init__
+    self.inject_adapter(self.model, adapter_name, low_cpu_mem_usage=low_cpu_mem_usage, state_dict=state_dict)
+  File "/workspace/nietzche-sllm-project/ml/finetune/.venv/lib/python3.12/site-packages/peft/tuners/tuners_utils.py", line 804, in inject_adapter
+    self._create_and_replace(
+  File "/workspace/nietzche-sllm-project/ml/finetune/.venv/lib/python3.12/site-packages/peft/tuners/lora/model.py", line 250, in _create_and_replace
+    new_module = self._create_new_module(lora_config, adapter_name, target, device_map=device_map, **kwargs)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/nietzche-sllm-project/ml/finetune/.venv/lib/python3.12/site-packages/peft/tuners/lora/model.py", line 343, in _create_new_module
+    raise ValueError(
+ValueError: Target module Gemma4ClippableLinear(
+  (linear): Linear(in_features=1152, out_features=1152, bias=False)
+) is not supported. Currently, only the following modules are supported: `torch.nn.Linear`, `torch.nn.Embedding`, `torch.nn.Conv1d`, `torch.nn.Conv2d`, `torch.nn.Conv3d`, `transformers.pytorch_utils.Conv1D`, `torch.nn.MultiheadAttention.`.
