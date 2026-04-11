@@ -120,6 +120,12 @@ ml/finetune/wandb/
 !ml/finetune/outputs/stage_b_test/
 !ml/finetune/outputs/stage_b_test/*.jsonl
 
+# Stage C LLM judge 채점 결과
+!ml/finetune/outputs/stage_c/
+!ml/finetune/outputs/stage_c/*.jsonl
+!ml/finetune/outputs/stage_c/*.json
+!ml/finetune/outputs/stage_c/*.md
+
 # Stage B 실행 로그 (수 MB, 디버깅/재현용)
 !ml/finetune/logs/
 !ml/finetune/logs/*.log
