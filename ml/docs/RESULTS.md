@@ -555,8 +555,15 @@ ml/finetune/outputs/stage_c/
 ├── scored_report.json        모델별 요약 (점수만)            2K
 ├── scored_cot.jsonl          828개 채점 결과 (reasoning 포함) 816K
 ├── scored_cot_report.json    모델별 요약 (CoT)               2K
-└── report.md                 모델 × voice × pattern breakdown 4.5K
+├── report.md                 모델 × voice × pattern breakdown 4.5K
+└── analysis/                 stage_c_analyze.py 산출물 (--format all)
+    ├── {subcommand}.txt      ASCII 표
+    ├── {subcommand}.md       마크다운 표
+    ├── {subcommand}.json     머신 판독용
+    └── {subcommand}.csv      엑셀/판다스용
 ```
+
+**분석 도구**: `finetune/scripts/stage_c_analyze.py` (12 서브커맨드, 5 출력 포맷). 자세한 사용법은 `--help` 또는 `ARCHITECTURE.md §4.5`.
 
 **왜 두 버전인가**: 점수만 버전이 먼저 완료된 뒤, judge 평가 신뢰도와 Q3 Voice 미스터리 원인 규명을 위해 G-Eval 방식의 reasoning 버전을 추가 실행. 두 결과는 직접 비교 가능 (동일 judge·동일 rubric).
 

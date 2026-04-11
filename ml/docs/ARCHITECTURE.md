@@ -245,7 +245,8 @@ ml/
 │   │   ├── test_b2_vllm_merged.py   검증 테스트 B2
 │   │   ├── run_judge_server.sh      Stage C: judge vLLM 서버
 │   │   ├── stage_c_score.py         Stage C: 채점 (Q1/Q2/Q3 + CoT)
-│   │   └── stage_c_report.py        Stage C: breakdown 리포트
+│   │   ├── stage_c_report.py        Stage C: breakdown 리포트
+│   │   └── stage_c_analyze.py       Stage C: 다목적 분석 도구 (12 서브커맨드)
 │   ├── outputs/
 │   │   ├── nietzsche-lora-31b/    ⭐ LoRA 체크포인트 (4.4G, gitignore)
 │   │   │   ├── README.md          모델 카드
@@ -417,6 +418,7 @@ model.save_pretrained_merged(
 | Judge Server | Gemma 4 26B-A4B vLLM 서버 (Stage A와 동일) | `finetune/scripts/run_judge_server.sh` | ml |
 | Stage C Score | Q1/Q2/Q3 채점 + collapse heuristic + CoT(`--with-reasoning`) | `finetune/scripts/stage_c_score.py` | ml |
 | Stage C Report | 모델 × voice × pattern breakdown 마크다운 | `finetune/scripts/stage_c_report.py` | ml |
+| Stage C Analyze | 다목적 분석 도구 — 12 서브커맨드, 5 출력 포맷 (text/markdown/json/csv/all) | `finetune/scripts/stage_c_analyze.py` | ml |
 
 `stage_a_score.py` 패턴을 따르되, 입력은 `responses.jsonl × eval.jsonl` join,
 출력은 `model_tag` 보존 + 점수만 / CoT 두 모드 분리(`scored.jsonl` / `scored_cot.jsonl`).
