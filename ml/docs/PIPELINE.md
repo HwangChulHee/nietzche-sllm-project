@@ -119,27 +119,30 @@ ls -la .venv/bin/python finetune/.venv/bin/python
 cd /workspace/nietzche-sllm-project/ml
 source .venv/bin/activate
 
-# 5권 청커 순차 실행
-python v2_pipeline/english_chunker_gs.py    # JW (즐거운 학문)
-python v2_pipeline/english_chunker_bge.py   # BGE (선악의 저편)
-python v2_pipeline/english_chunker_gm.py    # GM (도덕의 계보)
-python v2_pipeline/english_chunker_ti.py    # TI (우상의 황혼)
-python v2_pipeline/english_chunker_eh.py    # EH (이 사람을 보라)
+# 5권 청커 순차 실행 (각 책 전용 청커)
+python v2_pipeline/english_chunker_gs.py    # JW (즐거운 학문) → 383 청크
+python v2_pipeline/english_chunker_bge.py   # BGE (선악의 저편) → 296 청크
+python v2_pipeline/english_chunker_gm.py    # GM (도덕의 계보) → 77 청크
+python v2_pipeline/english_chunker_ti.py    # TI (우상의 황혼) → 151 청크
+python v2_pipeline/english_chunker_eh.py    # EH (이 사람을 보라) → 66 청크
 
-# 결과 검증
+# 결과 검증 (expected_total과 비교)
 python v2_pipeline/verify_chunks.py
 ```
 
-**출력**: `v2_data/english_chunks/{bge,eh,gm,gs,ti}.jsonl`
+**출력**: `v2_data/english_chunks/{bge,eh,gm,gs,ti}.jsonl` (총 973 청크)
 
-**예상 시간**: 5분 미만 (단순 텍스트 처리)
+**예상 시간**: 5분 미만 (단순 텍스트 처리, LLM 호출 없음)
 
-## 2.2 Stage 0.5: 3-Track LLM 필터
+## 2.2 Stage 0.7: 한국어 재구성 (필터보다 먼저!)
+
+> ⚠️ **순서 주의**: 한국어 재구성이 LLM 필터보다 먼저 실행됩니다.
+> 다음 단계의 LLM judge가 한국어 텍스트로 채점하기 때문입니다.
 
 **선결**: vLLM judge 서버가 떠 있어야 함.
 
 ```bash
-# 별도 터미널에서 judge 서버 띄우기
+# 별도 터미널에서 judge 서버 띄우기 (이후 모든 LLM 단계에서 재사용)
 cd /workspace/nietzche-sllm-project/ml
 source .venv/bin/activate
 
@@ -149,31 +152,60 @@ vllm serve google/gemma-4-26B-A4B-it \
     --gpu-memory-utilization 0.85
 ```
 
-서버 준비 후 (`127.0.0.1:8000` 응답 확인):
+서버 준비 후 (`curl http://127.0.0.1:8000/v1/models` 응답 확인):
 
 ```bash
-# 새 터미널에서 필터 실행
+# 새 터미널에서 재구성 실행
 cd /workspace/nietzche-sllm-project/ml
 source .venv/bin/activate
-python v2_pipeline/track_filter.py
-```
 
-**출력**: `v2_data/filtered/{book}.jsonl`
-
-**예상 시간**: 30~60분 (LLM 호출 ~수천 회)
-
-## 2.3 Stage 0.7: 한국어 재구성
-
-```bash
-# vLLM judge 서버 그대로 유지
 python v2_pipeline/reconstructor.py
 ```
 
-**출력**: `v2_data/reconstructed/{book}.jsonl`
+**입력**: `english_chunks/*.jsonl` (973 청크)
+**출력**: `reconstructed/*.jsonl` (973개, 1:1 매핑, `text_ko_reconstructed` 필드 추가)
+
+**LLM 설정**: Gemma 4 26B, temperature 0.3, concurrency 16, retry 3
+
+**프롬프트**: `v2_pipeline/prompts/reconstruction.txt` (5권 동일 프롬프트)
 
 **예상 시간**: 1~2시간 (가장 비용 큰 단계)
 
-**핵심 프롬프트**: `v2_pipeline/prompts/reconstruction.txt`
+**재시작 가능**: `aph_num` 기반 자동 skip. 중단 후 재실행 가능.
+
+## 2.3 Stage 0.5: 5축 LLM 채점 + 책별 통과 조건
+
+```bash
+# vLLM judge 서버 그대로 유지
+cd /workspace/nietzche-sllm-project/ml
+source .venv/bin/activate
+
+python v2_pipeline/track_filter.py
+```
+
+**입력**: `reconstructed/*.jsonl` (한국어로 재구성된 청크)
+**출력**: `filtered/*.jsonl` (973 채점 결과 + passed/use_case 필드)
+
+**LLM 설정**: Gemma 4 26B, temperature 0.2, max_tokens 150, concurrency 16
+
+**5축 평가**:
+- track_existential, track_philosophical, track_biographical (use_case 결정)
+- self_contained, density (품질 게이트)
+
+**책별 통과 조건**: 5권 모두 다름. 특히 TI는 챕터별 11가지 조건.
+자세한 사항: [DATA_SPEC.md §9.4](./DATA_SPEC.md)
+
+**예상 시간**: 30~60분
+
+**책별 실측 통과율**:
+```
+JW:  376/383 (98.2%)
+BGE: 274/296 (92.6%)
+GM:   70/77  (90.9%)  ← 가장 엄격한 조건
+TI:  143/151 (94.7%)
+EH:   65/66  (98.5%)
+Total: 928/973 (95.4%)
+```
 
 ## 2.4 Stage 0.9: SFT 샘플 생성
 
@@ -181,13 +213,16 @@ python v2_pipeline/reconstructor.py
 python v2_pipeline/sft_generator.py
 ```
 
-**출력**: `v2_data/sft_candidates/candidates.jsonl` (~2780개)
+**입력**: `filtered/*.jsonl` (passed=True인 928개만 자동 필터)
+**출력**: `sft_candidates/candidates.jsonl` (~2,780 SFT 샘플)
 
-**핵심 설계**: 청크당 3개의 서로 다른 (question_type, response_pattern) 변주 자동 생성.
+**핵심 메커니즘**:
+- **청크당 3개**를 한 LLM 호출에 생성 (3번 호출 X)
+- temperature **0.85** (다양성 우선)
+- `USE_CASE_TO_PATTERNS` 매핑으로 패턴 제한
+- voice별 system prompt **9개** 중 random.choice
 
 **예상 시간**: 30~60분
-
----
 
 # 3. Stage A: 데이터 품질 관리
 

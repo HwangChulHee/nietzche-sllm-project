@@ -64,38 +64,51 @@
 
 ## 2.1 5단계 파이프라인
 
-```
-[Stage 0]              [Stage A]              [학습]               [Stage B]            [Stage C]
-원전 → SFT 생성   →   품질 관리          →   LoRA 파인튜닝    →   응답 생성        →   채점
+⚠️ **중요**: 실제 파이프라인은 아래 순서대로 실행됩니다. 데이터 생성 단계의
+**한국어 재구성이 LLM 필터보다 먼저** 실행되며, 필터는 한국어 텍스트로 채점합니다.
 
-5권 영어 텍스트       Clean → Score          Gemma 4 31B          baseline + 5        Q1/Q2/Q3
-                     → Dedup → Select       + LoRA r=16          epochs 평가          breakdown
-                                            5 epochs
-
-v2_data/            v2_data/                finetune/            finetune/outputs/    (작성 예정)
-  english_raw/       sft_candidates/         outputs/              stage_b/
-  english_chunks/    sft_dataset/             nietzsche-lora-31b/
-  filtered/                                                       
-  reconstructed/                                                  
-  sft_candidates/                                                 
 ```
+[Stage 0]            [Stage 0.7]          [Stage 0.5]          [Stage 0.9]          [Stage A]            [학습]               [Stage B]            [Stage C]
+원전 청킹       →    한국어 재구성   →    5축 LLM 채점   →    SFT 생성       →    품질 관리       →    LoRA 파인튜닝   →    응답 생성       →    채점
+
+5권 영어 텍스트     Gemma 4 26B          Gemma 4 26B           청크당 3개          Clean → Score        Gemma 4 31B          baseline + 5        Q1/Q2/Q3
+                    (한국어로 재작성)     (한국어로 채점)        (한 호출에 3개)      → Dedup → Select    + LoRA r=16          epochs 평가          breakdown
+                                         + 책별 통과 조건                                                5 epochs
+
+v2_data/            v2_data/             v2_data/              v2_data/             v2_data/             finetune/            finetune/outputs/    (작성 예정)
+  english_raw/        reconstructed/       filtered/             sft_candidates/      sft_dataset/          outputs/              stage_b/
+  english_chunks/     (973, 1:1)           (973 + scores         (~2780)             (train/eval)         nietzsche-lora-31b/
+  (973)                                    + passed flag)
+                                           928 passed
+```
+
+### filtered/ 디렉토리 주의사항
+
+`filtered/`는 "통과한 청크만"이 아니라 "**채점 결과를 추가한 973개 전체**"를
+담고 있습니다. `passed=True/False` 필드로 구분되며, 다음 단계(Stage 0.9)가
+True인 928개만 사용합니다.
+
+더 정확한 이름은 `scored_chunks/`였을 것. v11에서 리네이밍 검토.
 
 ## 2.2 단계별 입출력 요약
 
 | 단계 | 코드 위치 | 입력 | 출력 | venv |
 |---|---|---|---|---|
-| Stage 0 | `v2_pipeline/english_chunker_*.py` | 원전 (txt) | 청크 (jsonl) | ml |
-| Stage 0.5 | `v2_pipeline/track_filter.py` | 청크 | 필터 통과 청크 | ml |
-| Stage 0.7 | `v2_pipeline/reconstructor.py` | 영어 청크 | 한국어 재구성 | ml |
-| Stage 0.9 | `v2_pipeline/sft_generator.py` | 한국어 청크 | SFT 후보 | ml |
+| Stage 0 | `v2_pipeline/english_chunker_*.py` × 5 | 원전 (txt) | 청크 (jsonl) | ml |
+| **Stage 0.7** | `v2_pipeline/reconstructor.py` | english_chunks | reconstructed (한국어) | ml |
+| **Stage 0.5** | `v2_pipeline/track_filter.py` | reconstructed | filtered (5축 채점 + passed) | ml |
+| Stage 0.9 | `v2_pipeline/sft_generator.py` | filtered (passed만) | sft_candidates/candidates.jsonl | ml |
 | Stage A-1 | `v2_pipeline/stage_a_clean.py` | candidates.jsonl | cleaned.jsonl | ml |
 | Stage A-2 | `v2_pipeline/stage_a_score.py` | cleaned.jsonl | scored.jsonl | ml |
 | Stage A-3 | `v2_pipeline/stage_a_dedup.py` | scored.jsonl | deduped.jsonl | ml |
 | Stage A-4 | `v2_pipeline/stage_a_select.py` | deduped.jsonl | train/eval.jsonl | ml |
 | 학습 | `finetune/scripts/train.py` | train.jsonl | LoRA 체크포인트 5개 | finetune |
-| Merge | `finetune/scripts/merge_one.py` | LoRA + base | merged 모델 | finetune |
+| Merge | `finetune/scripts/merge_one.py` | LoRA + base | merged 모델 (62GB) | finetune |
 | Stage B | `finetune/scripts/stage_b_generate.py` | merged + eval.jsonl | responses.jsonl | ml |
 | Stage C | (작성 예정) `stage_c_*.py` | responses.jsonl | scored 결과 | ml |
+
+> ⚠️ **중요**: Stage 0.7이 Stage 0.5보다 **먼저** 실행됩니다. LLM judge는
+> 한국어로 재구성된 텍스트를 채점합니다. 자세한 사항은 [DATA_SPEC.md §9.1](./DATA_SPEC.md) 참고.
 
 **중요**: 학습은 `finetune` venv, 나머지는 모두 `ml` venv. 자세한 사항은 [ENVIRONMENTS.md](./ENVIRONMENTS.md).
 
@@ -274,19 +287,45 @@ ml/
 
 # 4. 컴포넌트 → 파일 매핑
 
-## 4.1 데이터 생성 (Stage 0)
+## 4.1 데이터 생성 (Stage 0 ~ 0.9)
 
 | 컴포넌트 | 역할 | 파일 | venv | 입력 | 출력 |
 |---|---|---|---|---|---|
-| BGE Chunker | 선악의 저편 청킹 | `v2_pipeline/english_chunker_bge.py` | ml | `english_raw/beyond-good-and-evil.txt` | `english_chunks/bge.jsonl` |
-| EH Chunker | 이 사람을 보라 청킹 | `v2_pipeline/english_chunker_eh.py` | ml | `english_raw/ecce-homo.txt` | `english_chunks/eh.jsonl` |
-| GM Chunker | 도덕의 계보 청킹 | `v2_pipeline/english_chunker_gm.py` | ml | `english_raw/the-genealogy-of-morals.txt` | `english_chunks/gm.jsonl` |
-| JW Chunker | 즐거운 학문 청킹 | `v2_pipeline/english_chunker_gs.py` | ml | `english_raw/the-joyful-wisdom.txt` | `english_chunks/gs.jsonl` |
-| TI Chunker | 우상의 황혼 청킹 | `v2_pipeline/english_chunker_ti.py` | ml | `english_raw/the-twilight-of-the-idols.txt` | `english_chunks/ti.jsonl` |
-| Verify | 청크 산출물 검증 | `v2_pipeline/verify_chunks.py` | ml | `english_chunks/*.jsonl` | (stdout) |
-| Track Filter | 3-Track LLM 필터 | `v2_pipeline/track_filter.py` | ml | `english_chunks/*.jsonl` | `filtered/*.jsonl` |
-| Reconstructor | 한국어 재구성 | `v2_pipeline/reconstructor.py` | ml | `filtered/*.jsonl` | `reconstructed/*.jsonl` |
-| SFT Generator | 청크당 3개 SFT 생성 | `v2_pipeline/sft_generator.py` | ml | `reconstructed/*.jsonl` | `sft_candidates/candidates.jsonl` |
+| BGE Chunker | 선악의 저편 청킹 (296 expected) | `v2_pipeline/english_chunker_bge.py` | ml | `english_raw/beyond-good-and-evil.txt` | `english_chunks/bge.jsonl` |
+| EH Chunker | 이 사람을 보라 청킹 (5 메인 챕터 + sub_chapter 자동 분리) | `v2_pipeline/english_chunker_eh.py` | ml | `english_raw/ecce-homo.txt` | `english_chunks/eh.jsonl` |
+| GM Chunker | 도덕의 계보 청킹 (3 essay + preface) | `v2_pipeline/english_chunker_gm.py` | ml | `english_raw/the-genealogy-of-morals.txt` | `english_chunks/gm.jsonl` |
+| JW Chunker | 즐거운 학문 청킹 (383 expected) | `v2_pipeline/english_chunker_gs.py` | ml | `english_raw/the-joyful-wisdom.txt` | `english_chunks/gs.jsonl` |
+| TI Chunker | 우상의 황혼 청킹 (11 챕터, Antichrist 제외) | `v2_pipeline/english_chunker_ti.py` | ml | `english_raw/the-twilight-of-the-idols.txt` | `english_chunks/ti.jsonl` |
+| **Verify Chunks** | **5권 청킹 결과 검증 (expected_total + 짧은/긴/빈/중복 검사)** | `v2_pipeline/verify_chunks.py` | ml | `english_chunks/*.jsonl` | (stdout) |
+| **Reconstructor (Stage 0.7)** | **한국어 재구성 (Gemma 4 26B, temp 0.3)** | `v2_pipeline/reconstructor.py` | ml | `english_chunks/*.jsonl` | `reconstructed/*.jsonl` |
+| **Track Filter (Stage 0.5)** | **5축 LLM 채점 + 책별 통과 조건 (TI 챕터별 11가지 조건 포함)** | `v2_pipeline/track_filter.py` | ml | `reconstructed/*.jsonl` | `filtered/*.jsonl` |
+| SFT Generator | 청크당 3개 SFT 생성 (한 LLM 호출, temp 0.85) | `v2_pipeline/sft_generator.py` | ml | `filtered/*.jsonl` (passed만) | `sft_candidates/candidates.jsonl` |
+
+> ⚠️ **순서 주의**: Reconstructor (0.7)가 Track Filter (0.5)보다 먼저 실행됩니다.
+> 디렉토리 이름의 숫자(0.5, 0.7)는 설계 시점의 의도였고 실제 실행 순서는 다릅니다.
+
+### 5축 평가 (track_filter.py)
+
+LLM이 한국어로 재구성된 청크를 5축으로 채점:
+1. `track_existential` — 현대인 고민에 응답 가능?
+2. `track_philosophical` — 개념·논증 명확?
+3. `track_biographical` — 자기 삶 서술?
+4. `self_contained` — 청크 단독 의미 통함?
+5. `density` — 통찰 압축도?
+
+각 축 1~5점. 책별 통과 조건은 5권 모두 다름. 자세한 사항은
+[DATA_SPEC.md §9.4](./DATA_SPEC.md) 참고.
+
+### 통과율 (실측)
+
+| 책 | 통과율 |
+|---|---|
+| EH | 65/66 (98.5%) — density 검사 없어 가장 높음 |
+| JW | 376/383 (98.2%) — OR 조건 |
+| TI | 143/151 (94.7%) — 챕터별 다른 조건 |
+| BGE | 274/296 (92.6%) |
+| GM | 70/77 (90.9%) — **가장 엄격** |
+| **합계** | **928/973 (95.4%)** |
 
 ## 4.2 데이터 품질 관리 (Stage A)
 
@@ -314,6 +353,33 @@ ml/
 - 학습 시간: 약 1시간 9분 (A100 80GB)
 - wandb run: searchformaat
 
+### Merge 메커니즘 (중요)
+
+`merge_one.py`는 PyTorch + peft 사용자가 헤매기 쉬운 부분이 있어서 명시:
+
+```python
+# Unsloth는 checkpoint 경로를 직접 받음 (base 모델 + adapter 자동 처리)
+model, tokenizer = FastLanguageModel.from_pretrained(
+    model_name=str(checkpoint),  # = nietzsche-lora-31b/checkpoint-288
+    max_seq_length=1024,         # 학습 시 384보다 길게
+    dtype=None,                  # auto bf16
+    load_in_4bit=False,
+)
+
+# bf16으로 merge + 저장 (한 줄)
+model.save_pretrained_merged(
+    str(output),
+    tokenizer,
+    save_method="merged_16bit",  # bf16
+)
+```
+
+**주의 사항**:
+- peft의 `PeftModel.merge_and_unload()` 사용 시 Gemma4ClippableLinear 에러 발생
+- Unsloth만이 Gemma 4 신규 layer를 정상 merge
+- merge 후 디렉토리 ~62GB. 검증(safetensors + config.json) 후 자동 cleanup
+- idempotent: 이미 merge된 epoch는 SKIP
+
 ## 4.4 Stage B (응답 생성)
 
 | 컴포넌트 | 역할 | 파일 | venv | 입력 | 출력 |
@@ -322,7 +388,7 @@ ml/
 | Test B1 (peft) | merge 시도 (실패) | `finetune/scripts/test_b1_merge_epoch1.py` | finetune | LoRA + base | (실패: Gemma4ClippableLinear) |
 | Test B1 (Unsloth) | merge 시도 (성공) | `finetune/scripts/test_b1_merge_epoch1_unsloth.py` | finetune | LoRA + base | merged 모델 |
 | Test B2 | merged 모델 검증 | `finetune/scripts/test_b2_vllm_merged.py` | ml | merged 모델 + eval (5개) | `stage_b_test/test_b2_epoch1.jsonl` |
-| Merge One | 단일 epoch merge | `finetune/scripts/merge_one.py` | finetune | epoch N | merged/epochN/ (임시) |
+| Merge One | 단일 epoch merge (Unsloth checkpoint 직접 로드 + save_pretrained_merged) | `finetune/scripts/merge_one.py` | finetune | epoch N checkpoint | merged/epochN/ (62GB) |
 | Generate | vLLM 추론 | `finetune/scripts/stage_b_generate.py` | ml | merged + eval.jsonl | `stage_b/responses.jsonl` (append) |
 | Run Stage B | 오케스트레이션 | `finetune/scripts/run_stage_b.sh` | (둘 다) | — | 6 모델 × 138 응답 = 828 |
 | Stats | 결과 통계 | `finetune/scripts/stage_b_stats.py` | ml | `stage_b/responses.jsonl` | (stdout) |
