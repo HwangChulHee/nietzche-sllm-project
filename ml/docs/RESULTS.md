@@ -30,6 +30,8 @@
 |---|---|---|
 | 학습 데이터 | 2,413 샘플 | `v2_data/sft_dataset/train.jsonl` |
 | 평가 데이터 (held-out) | 138 샘플 | `v2_data/sft_dataset/eval.jsonl` |
+| 원전 청크 수 | 973개 (5권) | `v2_data/english_chunks/*.jsonl` |
+| Stage 0.5 필터 통과율 | 928/973 (95.4%) | `v2_data/filtered/*.jsonl` (passed=True) |
 | Stage A 통과율 | 91.8% (2,780 → 2,551) | `v2_data/sft_candidates/*_report.json` |
 | 학습 시간 | 1시간 9분 54초 | `finetune/logs/train_31b_full.log` |
 | LoRA 체크포인트 | 5개 (epoch 1~5) | `finetune/outputs/nietzsche-lora-31b/checkpoint-*` |
@@ -58,6 +60,138 @@
 ---
 
 # 2. Stage A: 데이터 결과
+
+## 2.0 Stage 0 ~ 0.9 통과율 (Stage A 이전 단계)
+
+> **알림**: 이 섹션은 Stage A 이전의 데이터 생성 단계 결과입니다.
+> Stage A는 §2.1부터 시작.
+>
+> 자세한 알고리즘은 [DATA_SPEC.md §9](./DATA_SPEC.md), 명령은
+> [PIPELINE.md §2](./PIPELINE.md) 참고.
+
+### 2.0.1 단계별 카운트
+
+```
+원전 (5권 영어)
+       ↓ Stage 0: 청킹
+973 청크
+       ↓ Stage 0.7: 한국어 재구성
+973 청크 (1:1 매핑, text_ko_reconstructed 추가)
+       ↓ Stage 0.5: 5축 LLM 채점 + 책별 통과 조건
+973 채점 → 928 passed (95.4%)
+       ↓ Stage 0.9: SFT 생성 (passed만, 청크당 3개)
+~2,780 SFT 후보
+       ↓ Stage A 4단계
+2,413 train + 138 eval
+```
+
+### 2.0.2 책별 청크 수 (Stage 0)
+
+| 책 | 한국어 이름 | 청크 수 | expected_total | 청킹 단위 |
+|---|---|---|---|---|
+| JW | 즐거운 학문 | **383** | 383 ✓ | 1 아포리즘 = 1 청크 |
+| BGE | 선악의 저편 | **296** | 296 ✓ | 1 아포리즘 = 1 청크 (Part 9개) |
+| GM | 도덕의 계보 | 77 | 가변 | section 단위 (3 essay + preface) |
+| TI | 우상의 황혼 | 151 | 가변 | 챕터 × 아포리즘 (11 챕터) |
+| EH | 이 사람을 보라 | 66 | 가변 | 5 메인 챕터 × sub_chapter |
+| **합계** | — | **973** | — | — |
+
+JW와 BGE는 본편 아포리즘 수가 정해져 있어 expected_total과 1:1 검증 가능.
+
+### 2.0.3 책별 Stage 0.5 통과율 (LLM 5축 채점 + 책별 정책)
+
+```
+JW:  376 / 383 (98.2%)  ← 가장 높음 (조건 가장 약함)
+BGE: 274 / 296 (92.6%)
+GM:   70 /  77 (90.9%)  ← 가장 낮음 (조건 가장 엄격)
+TI:  143 / 151 (94.7%)
+EH:   65 /  66 (98.5%)  ← 자전 회고는 거의 다 통과
+─────────────────────
+Total: 928 / 973 (95.4%)
+```
+
+### 2.0.4 책별 통과 조건과 통과율의 인과관계
+
+| 책 | 통과 조건 | 통과율 | 해석 |
+|---|---|---|---|
+| EH | `(C>=3 OR B>=3) AND sc>=3` | 98.5% | density 검사 없음 (자전이라 밀도 무시) → 가장 높음 |
+| JW | `(A>=3 OR B>=3) AND sc>=3 AND den>=2` | 98.2% | OR 조건 + 낮은 density 임계 → 거의 통과 |
+| TI | 챕터별 11가지 다른 조건 | 94.7% | 챕터 성격에 맞춰 정교하게 설정 |
+| BGE | `B>=3 AND sc>=3 AND den>=2` | 92.6% | 철학 점수 필수 (BGE는 본격 철학서) |
+| GM | `B>=4 AND sc>=4 AND den>=3` | **90.9%** | **모든 축이 다른 책보다 한 단계 위 (가장 엄격)** |
+
+**핵심 관찰**:
+- **통과율과 통과 조건의 엄격성이 정확히 일치**
+- 데이터셋 설계가 의도대로 작동했다는 증거
+- GM의 높은 임계값(>=4, >=4, >=3)이 가장 낮은 통과율을 만듦
+- EH의 density 면제가 가장 높은 통과율을 만듦
+
+자세한 통과 조건은 [DATA_SPEC.md §9.4](./DATA_SPEC.md) 참고. TI 챕터별 11가지
+조건도 같은 섹션에 있음.
+
+### 2.0.5 5축 평가 정의 (Stage 0.5 LLM judge)
+
+LLM은 한국어로 재구성된 청크를 5개 축으로 1~5점 채점 (텍스트만 보고, 책 정보 없이):
+
+| 축 | 의미 |
+|---|---|
+| `track_existential` | 현대인 고민에 응답 가능한 통찰? |
+| `track_philosophical` | 개념·논증 명확? |
+| `track_biographical` | 화자 자신의 삶 서술? |
+| `self_contained` | 청크 단독으로 의미 통함? |
+| `density` | 통찰 압축도? |
+
+### 2.0.6 use_case 자동 결정
+
+5축 점수 중 3 tracks의 ≥3 여부로 use_case가 자동 도출됨:
+
+```python
+A = track_existential >= 3
+B = track_philosophical >= 3
+C = track_biographical >= 3
+
+if A and B and C: "all"
+if A and B:       "existential+philosophical"  # 가장 많음
+if B and C:       "philosophical+biographical"
+if A and C:       "existential+biographical"
+if A:             "existential"
+if B:             "philosophical"
+if C:             "biographical"
+```
+
+**즉 use_case는 사람이 정한 게 아니라 LLM 채점 결과에서 자동 도출**됩니다.
+이게 [DATA_SPEC.md §3.10](./DATA_SPEC.md)의 use_case enum의 출처.
+
+### 2.0.7 Stage 0.9: SFT 생성 결과
+
+- **입력**: 928 passed 청크
+- **이상적 출력**: 928 × 3 = 2,784
+- **실제 출력**: **2,780** (4건 LLM 실패로 0개 반환)
+- **실패율**: 0.4%
+
+**핵심 메커니즘**:
+- 청크당 3개를 **한 번의 LLM 호출에 생성** (3번 호출 X)
+- temperature 0.85 (다양성 우선)
+- `USE_CASE_TO_PATTERNS` 매핑으로 패턴 제한
+- voice별 system prompt 9개 중 random.choice
+
+### 2.0.8 v10.0.1 vs v10.0.2 정정 사항
+
+이전 문서(v10.0.1)는 추측에 기반해서 다음 사항이 잘못 적혀 있었음.
+Phase 1 코드 검토로 정정됨:
+
+| 항목 | v10.0.1 (잘못) | v10.0.2 (실제) |
+|---|---|---|
+| 파이프라인 순서 | 청킹 → 필터 → 재구성 → SFT | 청킹 → **재구성 → 필터** → SFT |
+| 필터 채점 텍스트 | 영어 (추측) | **한국어** (재구성된 텍스트) |
+| 5축 정의 | 표시 안 됨 | 완전 정의 |
+| 책별 통과 조건 | 표시 안 됨 | 5권 + TI 11챕터별 |
+| use_case 결정 | 사람이 정함 (추측) | LLM 채점에서 자동 도출 |
+| filtered/ 의미 | 통과한 청크만 | **973 채점 결과 전체** + passed flag |
+
+**메타 인사이트**: 이런 종류의 정정은 코드를 직접 읽지 않으면 발견할 수 없음.
+Phase 1 작업으로 8개 핵심 파일을 모두 검토해서 발견. 자세한 정정 항목은
+DATA_SPEC.md v10.0.2의 변경 이력 참고.
 
 ## 2.1 파이프라인 통과율
 
