@@ -41,6 +41,7 @@ Gemma 4 31B에 LoRA로 학습시켜 니체 페르소나 상담 sLLM을 만듦.
 | LoRA 학습 (5 epochs) | ✅ | 5 체크포인트 + HF Hub 업로드 |
 | Stage B (응답 생성, 6 모델 × 138) | ✅ | 828 응답 |
 | 모든 작업 문서화 (6 문서) | ✅ | `ml/docs/` |
+| **문서 정정 작업 (Phase 1~5)** | ✅ | DATA_SPEC v10.0.2, 34개 항목 정정 |
 
 ## 1.2 진행 중/예정 🟡
 
@@ -53,6 +54,7 @@ Gemma 4 31B에 LoRA로 학습시켜 니체 페르소나 상담 sLLM을 만듦.
 2. **epoch 4부터 token collapse** — 단일 토큰 무한 반복, 21,128자 폭주 등
 3. **eval_loss는 거짓말한다** — eval_loss +0.084가 실제론 응답 길이 +103%를 의미
 4. **데이터 검증 발견**: polemical_sharp voice 7%가 어미 일관성 결함 (DATA_SPEC §15.7)
+5. **자가 검증 비대칭 (Phase 1 발견)**: 데이터 생성 시점(reconstruction.txt)과 평가 시점(stage_a_score.py VOICE_DESCRIPTIONS)의 voice 정의가 달랐음. 후자만 어미를 명시. 이게 4번 결함의 정확한 원인 — 단순 버그가 아닌 파이프라인 설계 원칙의 문제. v11에서 voice 정의를 single source of truth로 통합 예정.
 
 ---
 

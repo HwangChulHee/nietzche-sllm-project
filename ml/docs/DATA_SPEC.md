@@ -53,6 +53,55 @@
 
 ---
 
+### v10.0.1 → v10.0.2 주요 변경 (Phase 1 정정)
+
+코드 직접 검토 결과, v10.0.1의 추측 기반 설명이 실제 구현과 다른 부분을 발견.
+34개 항목 정정.
+
+**파이프라인 순서 정정**:
+- v10.0.1: 청킹 → 필터 → 재구성 → SFT (잘못)
+- v10.0.2: 청킹 → **재구성** → **필터** → SFT (실제)
+- LLM judge는 영어가 아닌 **한국어 텍스트**로 5축 채점
+
+**§3.9 source_ref 형식 정정**:
+- BGE: `BGE_p{part}_s{n}` (Part 정보 포함)
+- EH: `EH_c{c}_sub{sub}_s{n}` (sub_chapter 자동 분리)
+
+**§7.5 System message 확장**:
+- 1개씩 → **9개** (voice당 3개씩, random.choice)
+
+**§8 책별 청킹 패턴 추가**:
+- 5권 청킹 알고리즘 (정규식 패턴, 종료 마커, expected_total)
+- TI Antichrist 제외 명시
+
+**§9 데이터 파이프라인 전면 재작성**:
+- 흐름 다이어그램 정정
+- 5축 평가 완전 정의 (track_existential, philosophical, biographical, self_contained, density)
+- 책별 통과 조건 (TI 챕터별 11가지 포함)
+- 책별 실측 통과율 (JW 98.2%, GM 90.9%, EH 98.5% 등)
+- use_case 자동 결정 메커니즘
+- sft_generator '한 호출에 3개' 메커니즘
+- 모든 단계 LLM 설정 (temperature, concurrency)
+
+**§10 Stage A 전면 정정**:
+- A-1 표절 검사: 5-gram → **15-char ngram**
+- A-1 길이 검사: 100~1500자 → **difficulty별 문장 수**
+- A-1 위로 표현: 8개 정확한 정규식
+- A-2 채점 원칙 ("의심스러우면 낮게")
+- A-2 VOICE_DESCRIPTIONS의 어미 명시
+- A-3 Dedup: 2단계 → **3단계** (MinHash + Rule1 + Rule2)
+- A-3 정확한 임계치 (0.85 / 0.93 / 0.92+0.85)
+- A-4 Stratification: 6축 → **3축** (voice × pattern × use_case)
+- A-4 MIN_GROUP_FOR_EVAL: 3 → **5**
+- A-4 **점수 기반 train/eval 선택**: 높은 게 train, 낮은 게 eval (의도적)
+
+**§15.7 어미 결함 원인 확정**:
+- "원인 추정" → **"원인 확정"**
+- 자가 검증 비대칭 패턴 정의
+- v11 voices.py 모듈 제안
+```
+
+
 ## 목차
 
 1. [요약](#1-요약)
