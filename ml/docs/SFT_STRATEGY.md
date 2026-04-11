@@ -179,6 +179,20 @@ assert _test_text.index("SYSTEM_PROBE") < _test_text.index("USER_PROBE"), \
 
 **왜 4번째 assertion이 핵심인가**: Unsloth Gemma 2/3 template은 system role을 user에 합쳐버립니다. 단순히 "SYSTEM_PROBE가 텍스트에 존재"만 검사하면 통과되지만, 순서 검사를 추가하면 잡힙니다.
 
+### 추가 교훈 (Phase 1 정정에서 발견)
+
+이 4-assertion 검증 패턴은 **데이터 생성 단계와 평가 단계의 voice 정의가 일치
+해야 한다**는 더 일반적인 원칙의 한 사례입니다. Phase 1 코드 검토에서 발견한
+또 다른 비대칭은 **§7.3 polemical_sharp 어미 일관성**에서 다룹니다.
+
+핵심 원칙:
+> **데이터 생성 시점의 기준**과 **데이터 평가 시점의 기준**이 일치해야 한다.
+> 그렇지 않으면 작은 결함이 누적되어 최종 데이터 품질을 잠식한다.
+
+이 프로젝트의 v11에서는 이 원칙을 **single source of truth**로 구현할 예정.
+voice 정의를 별도 모듈(`voices.py`)로 추출해서 reconstructor와 score가 모두
+같은 정의를 import하도록 리팩토링.
+
 ---
 
 # 3. Chat Template 사가
@@ -551,11 +565,98 @@ eval_loss와 응답 길이만으로는 **응답의 질**을 측정할 수 없음
 
 ## 7.3 polemical_sharp voice의 어미 일관성
 
-**문제**: 학습 데이터의 약 7% (63/872)가 경어체로 종결. BGE/GM 한국어 번역의 단정형과 불일치.
+**문제**: 학습 데이터의 약 7% (63/872)가 경어체로 종결. BGE/GM 한국어 번역의
+단정형과 불일치.
 
-**영향**: LoRA가 데이터의 어조를 그대로 학습 → 일부 응답이 경어체로 나올 가능성. Q3 (Voice & Persona) 점수에 일부 반영됐을 가능성 (3.55).
+### Phase 1 코드 검토로 확정한 정확한 원인: 자가 검증의 비대칭
 
-**v11 계획**: DATA_SPEC §15.7 참고. reconstructor.py 프롬프트 수정 + Stage A-1에 voice 검사 추가.
+이전 v1 문서는 "원인 추정"에 그쳤지만, Phase 1 코드 검토 결과 정확한 원인을
+확정했습니다.
+
+**Stage 0.7 (Reconstruction) — 어미 명시 없음**:
+
+`v2_pipeline/prompts/reconstruction.txt`:
+```
+- 영어 원문의 의미를 정확히 보존
+- 니체 특유의 단호하고 압축적인 문체를 살림
+- 현대적 설명문으로 풀어쓰지 말 것
+```
+
+"단호하고 압축적"이라는 일반 지시만 있고, **종결 어미는 명시되지 않음**.
+**5권 모두 동일 프롬프트**로 처리.
+
+**Stage A-2 (Score) — 어미 명시 있음**:
+
+`v2_pipeline/stage_a_score.py`의 `VOICE_DESCRIPTIONS`:
+```python
+"polemical_sharp": (
+    "논쟁적 예리함. 날카롭고 분석적, 거리감 있는 냉소. "
+    "도덕/관습의 가면을 벗기는 태도. "
+    "어미: '~라 부르겠다', '~임을 부정할 수 없다'"
+),
+```
+
+→ **채점할 때는 어미를 봤지만, 데이터를 만들 때는 어미를 시키지 않았음**.
+
+### 인과관계
+
+```
+1. Reconstruction 프롬프트가 어미 명시 안 함
+   ↓
+2. LLM이 일부 청크를 경어체로 한국어화 (자연스러운 정중함)
+   ↓
+3. SFT generator는 reconstructed 텍스트를 그대로 받아 학습 샘플 생성
+   → 경어체 청크는 경어체 SFT를 만듦
+   ↓
+4. Stage A-1 Clean에 voice × 어미 호환성 검사 없음 → 통과
+   ↓
+5. Stage A-2 Score는 어미 봤지만 점수만 매김 (필터링 X)
+   → Q3 평균 3.55 (Q1/Q2 대비 낮음)
+   ↓
+6. polemical_sharp 872개 중 63개가 경어체 (7%)
+```
+
+### 학습/평가에 미친 영향
+
+- LoRA가 학습 데이터의 어조를 그대로 학습 → 일부 응답이 경어체로 나올 가능성
+- Q3 (Voice & Persona) 평균 점수 3.55가 다른 두 축(4.53, 4.81)보다 낮은 것은
+  이런 어미 불일치를 LLM judge가 일부 반영했을 가능성
+- Stage C에서 epoch별 voice 일관성을 정량 측정할 예정
+
+### 메타 인사이트: 자가 검증의 비대칭
+
+이 발견의 진짜 가치는 **개별 결함**이 아니라 **자가 검증 비대칭**이라는 패턴.
+
+> 데이터 생성 시점의 기준과 데이터 평가 시점의 기준이 일치하지 않으면,
+> 두 단계 사이에서 결함이 새어 나간다.
+
+이는 단순히 프롬프트를 보강하는 게 아니라 **파이프라인 설계 원칙**의 문제이며,
+v11에서는 voice 정의를 단일 source of truth로 추출하는 리팩토링이 필요.
+
+```python
+# v11 제안: voices.py
+VOICES = {
+    "polemical_sharp": {
+        "description": "...",
+        "ending_patterns": ["다", "이다"],
+        "ending_anti_patterns": ["합니다", "입니다"],
+        "person": "1인칭 + 그대/당신",
+    },
+    ...
+}
+
+# reconstructor.py와 stage_a_score.py가 둘 다 import
+from voices import VOICES
+```
+
+자세한 내용은 [DATA_SPEC.md §15.7](./DATA_SPEC.md) 참고.
+
+### v11 계획
+
+1. **`reconstructor.py` 프롬프트 개선**: voice별 종결 어미 명시
+2. **`stage_a_clean.py`에 voice × 어미 검사 추가**: 경어체 polemical_sharp 자동 폐기
+3. **Voice 정의 single source of truth로 리팩토링**: `voices.py` 모듈
+```
 
 ## 7.4 Eval Loss의 한계
 
@@ -588,6 +689,75 @@ eval_loss와 응답 길이만으로는 **응답의 질**을 측정할 수 없음
 - 학습 데이터의 EOS 토큰 분포 확인
 - LoRA dropout 0.05~0.1로 재학습 후 비교
 - assistant_only_loss=True가 가능한 다른 trainer로 비교
+
+## 7.7 청킹 한계 (Phase 1 발견)
+
+Phase 1 코드 검토에서 발견한 청킹 알고리즘의 한계들. 데이터 품질에 직접
+영향은 적지만, v11에서 정리할 가치가 있음.
+
+### 7.7.1 TI 챕터 11 — 번호 없는 챕터
+
+`english_chunker_ti.py`:
+> "번호 없는 챕터(예: The Hammer Speaketh): 챕터 전체를 1청크"
+
+TI의 챕터 11 "The Hammer Speaketh"는 아포리즘 번호가 없어서 챕터 전체가
+**단 1개의 청크**로 처리됩니다.
+
+**영향**:
+- 이 청크는 다른 청크보다 훨씬 김 (수십 줄)
+- Stage 0.5 통과 조건도 챕터 11만 다름: `den >= 4` (밀도만 검사)
+- SFT 생성 시 1개 청크만 입력 → 최대 3개 SFT만 생성됨
+
+**정당한 해결**: 챕터 11은 짧은 격언 모음이라 의미 단위 분할이 어려움.
+챕터 전체를 1청크로 처리하는 게 합리적 (다른 청크들도 격언 단위가 아님).
+
+### 7.7.2 EH의 sub_chapter 자동 분리
+
+`english_chunker_eh.py`:
+> "챕터 안에서 번호가 리셋되면 sub_chapter 자동 분리
+>  (예: 'Why I Write...' 안의 BT/UM/HAH/D/JW/TSZ/BGE/GM/TI/Wagner 회고)"
+
+EH의 "Why I Write Such Excellent Books" 챕터 안에는 각 책별 회고가 있고,
+회고마다 번호가 리셋됩니다. 청커가 이를 자동 감지해서 sub_chapter로 나눕니다.
+
+**좋은 점**: 책별 회고가 별도 청크로 보존되어 SFT의 다양성 확보.
+
+**한계**: source_ref 형식이 다른 책과 다름 (`EH_c4_sub3_s2`). DATA_SPEC §3.9에
+명시.
+
+### 7.7.3 책별 청크 단위가 다름
+
+| 책 | 청크 단위 | 평균 청크 길이 |
+|---|---|---|
+| JW | 1 아포리즘 = 1 청크 | 짧음 |
+| BGE | 1 아포리즘 = 1 청크 (Part 9개) | 짧음 |
+| GM | section 단위 (3 essay) | **김** (essay 기반) |
+| TI | 챕터 × 아포리즘 | 다양 |
+| EH | 챕터 × sub_chapter × 번호 | 다양 |
+
+GM이 가장 긴 청크를 가지는 이유: essay 단위라서. 이게 GM의 통과 조건이
+가장 엄격한 이유 중 하나 (긴 청크는 self_contained 점수가 낮을 수 있음).
+
+### 7.7.4 영어 원전 자체의 번역 다양성
+
+각 책마다 다른 번역자:
+- JW: Common 번역
+- BGE: Zimmern 번역
+- GM: Horace Samuel 번역
+- TI: Ludovici 번역
+- EH: Ludovici 번역
+
+번역자에 따라 어조와 어휘 선택이 다름. Stage 0.7 reconstruction이 한국어로
+재구성할 때 이 차이가 부분적으로 반영됨. 완벽한 통제 변수는 아님.
+
+### v11 계획
+
+1. **TI 챕터 11**: 더 세밀한 분할 시도 (격언 단위)
+2. **GM essay**: section을 더 작은 sub-section으로 나누기 시도
+3. **번역자 통일**: 가능한 한 같은 번역자의 텍스트로 통일 (단, 5권 모두를
+   같은 번역자가 번역한 경우는 드물어서 어려움)
+```
+
 
 ---
 
