@@ -19,7 +19,7 @@ Gemma 4 31B에 LoRA로 학습시켜 니체 페르소나 상담 sLLM을 만듦.
 - ✅ 데이터 파이프라인 완료 (Stage 0 ~ Stage A)
 - ✅ LoRA 학습 완료 (5 epochs, 1h 9m)
 - ✅ Stage B 평가 응답 생성 완료 (828 응답)
-- 🟡 **Stage C (LLM judge 채점) 진행 예정**
+- ✅ **Stage C 완료 (점수만 + CoT, best=epoch1)**
 - 🟡 **발표 자료 준비 중**
 
 **발표일**: **2026-04-13** (남은 시간 확인 필요!)
@@ -42,19 +42,19 @@ Gemma 4 31B에 LoRA로 학습시켜 니체 페르소나 상담 sLLM을 만듦.
 | Stage B (응답 생성, 6 모델 × 138) | ✅ | 828 응답 |
 | 모든 작업 문서화 (6 문서) | ✅ | `ml/docs/` |
 | **문서 정정 작업 (Phase 1~5)** | ✅ | DATA_SPEC v10.0.2, 34개 항목 정정 |
+| **Stage C 채점 (점수만 + CoT)** | ✅ | `finetune/outputs/stage_c/` (828 × 2) |
 
 ## 1.2 진행 중/예정 🟡
 
-- Stage C (LLM judge 채점)
 - 발표 자료 (PPT)
 
 ## 1.3 핵심 발견 (이 프로젝트의 메타 인사이트)
 
 1. **학습이 응답을 60% 간결화시킴** — baseline 697자 → epoch 1~3 ~280자
-2. **epoch 4부터 token collapse** — 단일 토큰 무한 반복, 21,128자 폭주 등
-3. **eval_loss는 거짓말한다** — eval_loss +0.084가 실제론 응답 길이 +103%를 의미
+2. **epoch 4부터 token collapse** — 27/138(19.6%) → epoch 5는 92/138(66.7%) 붕괴, 단일 토큰 무한 반복 21,128자 폭주
+3. **eval_loss는 거짓말한다 (Stage C로 확정)** — eval_loss 최저는 epoch 2(0.9358)였으나 Stage C 평균은 epoch 1이 1위(0.819 vs epoch 2의 0.800). epoch 3→4 구간 eval_loss +0.084 = Stage C mean -50% + collapse 19.6%
 4. **데이터 검증 발견**: polemical_sharp voice 7%가 어미 일관성 결함 (DATA_SPEC §15.7)
-5. **자가 검증 비대칭 (Phase 1 발견)**: 데이터 생성 시점(reconstruction.txt)과 평가 시점(stage_a_score.py VOICE_DESCRIPTIONS)의 voice 정의가 달랐음. 후자만 어미를 명시. 이게 4번 결함의 정확한 원인 — 단순 버그가 아닌 파이프라인 설계 원칙의 문제. v11에서 voice 정의를 single source of truth로 통합 예정.
+5. **자가 검증 비대칭 (Phase 1 발견 → Stage C CoT로 정량 확장)**: 데이터 생성 시점(reconstruction.txt)과 평가 시점(stage_a_score.py VOICE_DESCRIPTIONS)의 voice 정의가 달랐음. 후자만 어미를 명시. Stage C CoT 모드에서 judge가 reasoning을 강제당하자 모든 voice의 Q3 평균이 일괄 -0.3~-0.5점 하락 — contemplative_aphorism도 어미 결함 노출됨. 즉 결함은 polemical_sharp 한정이 아니라 voice 전반의 구조적 문제. v11에서 voice 정의를 single source of truth로 통합 예정.
 
 ---
 
@@ -103,10 +103,10 @@ Gemma 4 31B에 LoRA로 학습시켜 니체 페르소나 상담 sLLM을 만듦.
 ### "데이터셋 자체에 대한 한계"
 - `DATA_SPEC.md` §15 (7개 한계)
 
-### "Stage C 진행"
-- `PIPELINE.md` §6 (예정 명령)
-- `SFT_STRATEGY.md` §6 (best epoch 가설)
-- `RESULTS.md` §5 (placeholder + 예상 결과)
+### "Stage C 결과 확인"
+- `RESULTS.md` §5 (모델별 표 + best epoch + collapse + CoT 결과)
+- `SFT_STRATEGY.md` §6 (best epoch 결정 근거)
+- `PIPELINE.md` §6 (실행 명령)
 
 ## 2.3 5분 ramp-up 추천 순서
 
@@ -396,13 +396,11 @@ tokenizer = get_chat_template(tokenizer, chat_template="gemma-2")
 
 ## 7.1 즉시 우선순위 (발표 전)
 
-1. **Stage C 파이프라인 작성**
-   - `finetune/scripts/run_judge_server.sh`: judge vLLM 서버
-   - `finetune/scripts/stage_c_score.py`: Q1/Q2/Q3 채점 (`stage_a_score.py` 복사 + 수정)
-   - `finetune/scripts/stage_c_report.py`: 6 모델 × 3 axis breakdown
-2. **Stage C 본 실행** (30~60분 예상)
-3. **결과를 RESULTS.md §5에 채워넣기**
-4. **발표 자료 (PPT) 작성**
+1. ✅ ~~Stage C 파이프라인 작성~~ (완료, 2026-04-11)
+2. ✅ ~~Stage C 본 실행~~ (점수만 6분 + CoT 6분)
+3. ✅ ~~결과를 RESULTS.md §5에 채워넣기~~ (완료)
+4. **발표 자료 (PPT) 작성** ← 현재 우선순위
+5. (선택) Stage C CoT reason 정량 분석 — voice별 어미 결함 비율 집계 → DATA_SPEC §15.7 갱신
 
 ## 7.2 발표 자료 핵심 슬라이드 (5장)
 
@@ -412,7 +410,7 @@ tokenizer = get_chat_template(tokenizer, chat_template="gemma-2")
 2. **학습 곡선** — Eval loss V자 → 역U자
 3. **간결화 효과** — baseline 697자 → epoch 2 277자 (-60%)
 4. ⭐ **eval_loss는 거짓말한다** — token collapse 사례 (이게 가장 강력)
-5. **Best epoch 선택** — epoch 2 = eval_loss 최저 + 응답 정상
+5. **Best epoch 선택** — epoch 1 = Stage C 평균 최고 (eval_loss 최저는 epoch 2였으나 Stage C로 정정)
 
 ## 7.3 발표 후 정리 작업
 
@@ -514,7 +512,7 @@ nohup bash finetune/scripts/run_stage_b.sh > finetune/logs/stage_b_run.log 2>&1 
 | 원전 책 | 5권 (JW, BGE, GM, TI, EH) |
 | LoRA rank | 16 (alpha 32) |
 | Epochs | 5 (모두 보존) |
-| Best epoch | 2 (eval_loss 0.9358) |
+| Best epoch | **1** (Stage C mean 0.819, 잠정 epoch 2에서 변경) |
 | 학습 시간 | 1h 9m 54s |
 | Stage B 응답 | 828 (6 모델 × 138) |
 | Stage B 시간 | 94분 |
@@ -528,8 +526,7 @@ nohup bash finetune/scripts/run_stage_b.sh > finetune/logs/stage_b_run.log 2>&1 
 A: Stage A/학습/Stage B 모두 완료. Stage C와 발표 자료가 남음. 위 §1.1 참고.
 
 ### Q: "best epoch 뭐야?"
-A: 잠정적으로 **epoch 2** (eval_loss 0.9358 + 응답 안정). Stage C 결과 후 확정.
-SFT_STRATEGY §6 참고.
+A: **epoch 1** (Stage C 평균 0.819, 점수만/CoT 양쪽에서 1위). 이전엔 잠정 epoch 2였으나 Stage C로 정정. 자세한 근거는 RESULTS.md §5.5 또는 SFT_STRATEGY §6 참고.
 
 ### Q: "데이터셋에 문제 있어?"
 A: 7개 한계가 있음. 가장 흥미로운 건 polemical_sharp voice의 어미 일관성 결함 (7%).
@@ -542,17 +539,16 @@ A: 5장 슬라이드 outline이 RESULTS.md 부록에 있음. 핵심은 "eval_los
 ### Q: "환경 어떻게 설정해?"
 A: ENVIRONMENTS.md (자동 setup.sh + 12개 함정 카탈로그). venv 두 개임을 잊지 말 것.
 
-### Q: "Stage C 어떻게 진행해?"
-A: PIPELINE.md §6 + SFT_STRATEGY.md §6.3 가설 + RESULTS.md §5 placeholder.
-스크립트 작성부터 시작 (`stage_c_score.py`, `stage_c_report.py`).
+### Q: "Stage C 결과는?"
+A: 완료. RESULTS.md §5 (모델별 표 + Best epoch + collapse 분석 + 한계). 산출물은 `finetune/outputs/stage_c/`. 점수만(`scored.jsonl`) + reasoning 포함(`scored_cot.jsonl`) 두 버전.
 
 ---
 
 ## 문서 끝
 
-**최종 갱신**: 2026-04-11
-**버전**: v1.0
-**다음 갱신 예정**: Stage C 완료 후 §1.2 상태 업데이트, §7.1 우선순위 갱신
+**최종 갱신**: 2026-04-11 (Stage C 완료 반영)
+**버전**: v1.1
+**다음 갱신 예정**: 발표 후 v11 데이터셋 작업 시
 
 ---
 

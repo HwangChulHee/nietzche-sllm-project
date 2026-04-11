@@ -16,7 +16,7 @@
 2. [Stage A: 데이터 결과](#2-stage-a-데이터-결과)
 3. [학습: LoRA 결과](#3-학습-lora-결과)
 4. [Stage B: 응답 생성 결과](#4-stage-b-응답-생성-결과)
-5. [Stage C: 채점 결과 (예정)](#5-stage-c-채점-결과-예정)
+5. [Stage C: 채점 결과](#5-stage-c-채점-결과)
 6. [결과 파일 빠른 접근](#6-결과-파일-빠른-접근)
 7. [결과 검증 명령](#7-결과-검증-명령)
 
@@ -36,26 +36,34 @@
 | 학습 시간 | 1시간 9분 54초 | `finetune/logs/train_31b_full.log` |
 | LoRA 체크포인트 | 5개 (epoch 1~5) | `finetune/outputs/nietzsche-lora-31b/checkpoint-*` |
 | LoRA HF Hub | private, 5 branches | `banzack/nietzsche-gemma4-31b-lora` |
-| Best epoch (잠정) | **epoch 2** (eval_loss 0.9358) | (Stage C 후 확정) |
+| **Best epoch** | **epoch 1** (Stage C 평균 0.819) | (이전 가설: epoch 2 — Stage C로 정정) |
 | Stage B 응답 | 828개 (6 모델 × 138) | `finetune/outputs/stage_b/responses.jsonl` |
 | Stage B 시간 | 94분 | `finetune/logs/stage_b_run.log` |
-| Stage C | 진행 예정 | — |
+| Stage C 채점 | 828개 (점수만 + CoT) | `finetune/outputs/stage_c/scored*.jsonl` |
+| Stage C 시간 | 점수만 ~6분 / CoT ~6분 | — |
 
-## 1.2 핵심 발견 3가지
+## 1.2 핵심 발견 4가지
 
 ### 발견 1: 학습이 응답을 60% 간결화시킴
 - baseline: 697자 → epoch 1~3: ~280자
 - 니체 짧은 아포리즘 스타일을 잘 학습
 
 ### 발견 2: epoch 4부터 token collapse
-- epoch 4: bimodal (median 304 정상, max 21,128 폭주)
-- epoch 5: uniform shift (전체가 baseline보다 길어짐)
+- epoch 4: bimodal (median 304 정상, max 21,128 폭주, **27/138 = 19.6%** 붕괴)
+- epoch 5: catastrophic (**92/138 = 66.7%** 붕괴)
 - 단일 토큰 무한 반복 (`of of of...`, `l l l l...`)
 
-### 발견 3: eval_loss는 정성적 붕괴를 과소평가
-- epoch 3 → epoch 4: eval_loss +0.084 (미세)
-- 같은 구간: 평균 응답 길이 +103% (273 → 555자)
-- 결론: **loss curve만 보면 안 된다**
+### 발견 3: eval_loss는 거짓말한다 — Stage C로 확정
+- epoch 2가 eval_loss 최저(0.9358)였으나, **Stage C 평균은 epoch 1이 더 높음** (0.819 vs 0.800)
+- epoch 3 → 4: eval_loss +0.084 (미세) ↔ Stage C mean **−0.382** (-50%) + collapse 19.6%
+- epoch 4 → 5: eval_loss +0.07 (미세) ↔ Stage C mean **−0.184** (-47%) + collapse 66.7%
+- 결론: **eval_loss 미세 변화가 정성적 붕괴를 완전히 가린다**
+
+### 발견 4: 데이터셋 어미 결함이 학습에 전파되었다 (Stage C CoT로 발견)
+- Phase 1에서 polemical_sharp voice 7%의 어미 결함 발견 (DATA_SPEC §15.7)
+- Stage C CoT 모드에서 judge가 reasoning을 강제당하자 **모든 voice의 Q3 평균이 일괄 -0.3~-0.5점 하락**
+- baseline조차 어미 결함을 지적받음 → "voice 분위기는 맞지만 지정된 어미 패턴(`~인 것이다`, `~라 부르겠다` 등) 미사용"
+- 학습 모델들은 데이터셋의 결함을 그대로 학습한 정황 (정량 집계는 reason 분석 후 확정 예정)
 
 ---
 
@@ -534,57 +542,133 @@ ml/finetune/logs/
 
 ---
 
-# 5. Stage C: 채점 결과 (예정)
+# 5. Stage C: 채점 결과
 
-> **상태**: 작성 예정
-> **목표**: Stage B 응답 828개를 LLM judge로 채점, 6 모델 비교 리포트 생성
+> **상태**: ✅ 완료 (2026-04-11)
+> **결과 위치**: `ml/finetune/outputs/stage_c/`
 
-## 5.1 계획
-
-**Judge 모델**: Gemma 4 26B-A4B (Stage A-2와 동일)
-
-**채점 축**:
-- Q1: Pattern Fidelity (응답이 reference 패턴 규칙을 따르는가)
-- Q2: Q-A Coherence (질문-답변 정합성)
-- Q3: Voice & Persona (니체 voice 구현)
-
-**Breakdown 차원**:
-- 모델 (6): baseline + epoch 1~5
-- Voice (3): contemplative / polemical / hammer
-- Use case
-- Question type
-
-## 5.2 예상 결과 (가설)
-
-| Epoch | Q1 (Pattern) | Q2 (Coherence) | Q3 (Voice) | 종합 |
-|---|---|---|---|---|
-| baseline | 낮음 | 중간 | 낮음 | 기준선 |
-| 1 | 중간 | 높음 | 낮음~중간 | 학습 부족 |
-| **2** | **높음** | **높음** | **중간~높음** | **best (잠정)** |
-| 3 | 높음 | 높음 | 중간~높음 | 미미한 차이 |
-| 4 | 낮음 | 낮음 (token collapse) | 낮음 | 위험 |
-| 5 | 매우 낮음 | 매우 낮음 | 매우 낮음 | 사용 불가 |
-
-이 가설이 맞으면 **epoch 2가 final pick**으로 확정됨.
-
-## 5.3 생성될 파일 (예정)
+## 5.1 산출물 위치 맵
 
 ```
 ml/finetune/outputs/stage_c/
-├── scored.jsonl              828개 채점 결과
-├── scored_report.json        모델별 평균 점수
-└── breakdown_report.md       voice/question_type 별 상세 분석
+├── scored.jsonl              828개 채점 결과 (점수만)        329K
+├── scored_report.json        모델별 요약 (점수만)            2K
+├── scored_cot.jsonl          828개 채점 결과 (reasoning 포함) 816K
+├── scored_cot_report.json    모델별 요약 (CoT)               2K
+└── report.md                 모델 × voice × pattern breakdown 4.5K
 ```
 
-## 5.4 작성될 스크립트
+**왜 두 버전인가**: 점수만 버전이 먼저 완료된 뒤, judge 평가 신뢰도와 Q3 Voice 미스터리 원인 규명을 위해 G-Eval 방식의 reasoning 버전을 추가 실행. 두 결과는 직접 비교 가능 (동일 judge·동일 rubric).
 
-| 스크립트 | 역할 | 기반 |
-|---|---|---|
-| `finetune/scripts/run_judge_server.sh` | judge vLLM 서버 시작 | (신규) |
-| `finetune/scripts/stage_c_score.py` | Q1/Q2/Q3 채점 | `stage_a_score.py` 복사 + 수정 |
-| `finetune/scripts/stage_c_report.py` | breakdown 리포트 | (신규) |
+## 5.2 채점 방식
 
----
+| 항목 | 설정 |
+|---|---|
+| Judge 모델 | `google/gemma-4-26B-A4B-it` (Stage A와 동일) |
+| 서버 | 로컬 vLLM (`localhost:8000`) |
+| Concurrency | 16 |
+| Temperature | 0.2 |
+| Request timeout | 60초 |
+| Rubric | Q1 Pattern + Q2 Coherence + Q3 Voice (각 1~5점) |
+| Collapse 처리 | Heuristic pre-filter (4 규칙 OR) → 자동 (1,1,1) |
+
+**Collapse heuristic 4규칙** (judge 호출 없이 자동 최저점):
+- R1: 동일 문자 30자 이상 연속
+- R2: 전체 문자 다양성 < 5%
+- R3: 10-gram distinct ratio < 15%
+- R4: 3000자 이상 + 다양성 < 15%
+
+CoT 모드는 Stage A와 동일 rubric에 G-Eval 원칙(reason을 score보다 먼저 생성) 적용. 축별 reason 한국어 1~2문장.
+
+## 5.3 모델별 결과 (점수만)
+
+| 모델 | N | Mean | Q1 | Q2 | Q3 | Collapsed | A | B | C | F |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| baseline | 138 | 0.786 | 3.46 | 4.57 | 3.77 | 0 | 62 | 39 | 34 | 3 |
+| **epoch1** | 138 | **0.819** | 4.09 | 4.75 | 3.45 | 0 | 72 | 40 | 24 | 2 |
+| epoch2 | 138 | 0.800 | 4.07 | 4.64 | 3.30 | 0 | 66 | 43 | 19 | 10 |
+| epoch3 | 138 | 0.770 | 3.91 | 4.43 | 3.21 | 0 | 51 | 43 | 37 | 7 |
+| epoch4 | 138 | 0.388 | 2.09 | 2.25 | 1.49 | **27** | 3 | 10 | 13 | 112 |
+| epoch5 | 138 | 0.204 | 1.02 | 1.02 | 1.02 | **92** | 0 | 0 | 1 | 137 |
+
+## 5.4 모델별 결과 (CoT 모드)
+
+| 모델 | N | Mean | Q1 | Q2 | Q3 | Δ Q3 vs 점수만 |
+|---|---:|---:|---:|---:|---:|---:|
+| baseline | 138 | 0.777 | 3.64 | 4.57 | 3.44 | **−0.33** |
+| **epoch1** | 138 | **0.784** | 4.14 | 4.69 | 2.93 | **−0.52** |
+| epoch2 | 138 | 0.769 | 4.07 | 4.62 | 2.86 | **−0.44** |
+| epoch3 | 138 | 0.748 | 4.01 | 4.49 | 2.72 | **−0.49** |
+| epoch4 | 138 | 0.379 | 2.10 | 2.10 | 1.49 | 0 |
+| epoch5 | 138 | 0.206 | 1.04 | 1.02 | 1.03 | +0.01 |
+
+**관찰**: CoT 모드에서 **Q3만 일괄 -0.3~-0.5점 하락**, Q1·Q2는 거의 동일. Judge가 reasoning을 강제당하면 voice rubric을 더 엄격히 적용한다는 증거. 자세한 분석은 §5.7.
+
+## 5.5 Best epoch 결정
+
+**Best = epoch 1** (점수만/CoT 양쪽에서 1위)
+
+**선정 기준**: 평균 normalized_score 최고. 동점 tie-break는 Q3 (페르소나 품질이 핵심 목적).
+
+**가설 변경**: 이전 SFT_STRATEGY §6에서 잠정 best로 잡았던 **epoch 2는 Stage C에서 1위 자리를 내줌**. 이유:
+- epoch 2의 eval_loss(0.9358)가 최저였지만, 그게 곧 응답 품질 최고를 의미하지는 않음
+- epoch 2의 Grade F가 10개로 epoch 1(2개)의 5배 — 평균은 살짝 낮아도 분산이 더 큼 (불안정성 시작)
+- 수렴 과정에서 epoch 1이 "충분히 학습 + 아직 안정"의 sweet spot
+
+## 5.6 Collapse 분석
+
+| 모델 | Collapsed | 비율 | 주 사유 (점수만) |
+|---|---:|---:|---|
+| baseline~epoch3 | 0 | 0.0% | — |
+| epoch4 | 27 | **19.6%** | max_run(18), char_diversity(7), empty(2) |
+| epoch5 | 92 | **66.7%** | char_diversity(52), ngram_distinct(21), max_run(18) |
+
+**Progressive 양상**:
+- epoch 4 = "간헐적 발작" — 주로 max_run (같은 문자 30+ 연속, 부분 폭주)
+- epoch 5 = "만성 병" — 주로 char_diversity 5% 미만 (응답 전체가 좁은 문자 집합)
+
+heuristic R3(`ngram_distinct`)가 epoch 5에서 21개를 잡은 것은 주기적 반복(`ABCDEFGHIJ × 100` 타입)을 감지한 것. 이 케이스는 R1·R2로는 못 잡힘.
+
+## 5.7 알려진 한계
+
+1. **Self-preference bias 가능성** — Judge(Gemma 4 26B-A4B)와 student(Gemma 4 31B)가 같은 family. 학계 보고된 self-preference 영향 가능. CoT 모드에서 baseline의 Q3가 epoch 2보다 높게 나온 것은 이 영향과 어미 결함 학습 중 어느 쪽이 더 큰 영향인지 단정하기 어려움.
+
+2. **Length bias** — Pointwise judge는 일반적으로 긴 응답을 유리하게 보는 경향. 다만 이 프로젝트에선 baseline(697자)이 학습 모델(280자)에게 졌으므로 length bias를 극복한 결과로 해석 가능 (방어 논리).
+
+3. **인간 검증 부재** — 학계 표준은 LLM judge 신뢰도 검증을 위해 human annotation 20~50개에 Spearman/Cohen's κ 측정. 캡스톤 시간 제약으로 미수행. CoT reason을 직접 읽는 정성 검토로 일부 보완.
+
+4. **데이터셋 어미 결함 — 정량 집계 미완료**: Stage C CoT의 reason 13개 sample 분석에서 contemplative_aphorism voice 12/13(92%)이 어미 결함 지적을 받음. 전체 828개 reason에 대한 voice별 결함 비율 집계는 발표 후 v11 작업으로.
+
+## 5.8 검증 명령
+
+```bash
+# 점수만 결과 확인
+wc -l finetune/outputs/stage_c/scored.jsonl                              # 828
+cat finetune/outputs/stage_c/scored_report.json | python -m json.tool
+
+# CoT 결과 확인
+wc -l finetune/outputs/stage_c/scored_cot.jsonl                          # 828
+cat finetune/outputs/stage_c/scored_cot_report.json | python -m json.tool
+
+# 상세 breakdown 마크다운
+cat finetune/outputs/stage_c/report.md
+
+# 또는 다시 생성
+python finetune/scripts/stage_c_report.py
+
+# 특정 샘플의 reason 보기
+python -c "
+import json
+for line in open('finetune/outputs/stage_c/scored_cot.jsonl'):
+    r = json.loads(line)
+    if r['model_tag']=='epoch1' and r['voice']=='polemical_sharp':
+        print(r['sample_id'], r['q_scores'])
+        if r.get('q_reasons'):
+            print(' ', r['q_reasons']['q3'])
+        print()
+" | head -30
+```
+
 
 # 6. 결과 파일 빠른 접근
 
@@ -616,8 +700,8 @@ ml/v2_data/reconstructed/                       # 한국어 재구성 (5.4M)
 
 ```bash
 # 로컬 (gitignore)
-ml/finetune/outputs/nietzsche-lora-31b/checkpoint-144/   # epoch 1
-ml/finetune/outputs/nietzsche-lora-31b/checkpoint-288/   # epoch 2 ⭐
+ml/finetune/outputs/nietzsche-lora-31b/checkpoint-144/   # epoch 1 ⭐ (Stage C best)
+ml/finetune/outputs/nietzsche-lora-31b/checkpoint-288/   # epoch 2
 ml/finetune/outputs/nietzsche-lora-31b/checkpoint-432/   # epoch 3
 ml/finetune/outputs/nietzsche-lora-31b/checkpoint-576/   # epoch 4
 ml/finetune/outputs/nietzsche-lora-31b/checkpoint-720/   # epoch 5
@@ -636,6 +720,13 @@ ml/finetune/outputs/stage_b/responses.jsonl.bak          # 백업 (93K)
 
 ml/finetune/outputs/stage_b_test/test_a_baseline.jsonl   # vLLM 검증 (415K)
 ml/finetune/outputs/stage_b_test/test_b2_epoch1.jsonl    # merge 검증 (10K)
+
+# Stage C
+ml/finetune/outputs/stage_c/scored.jsonl                 # 828 채점 (점수만, 329K)
+ml/finetune/outputs/stage_c/scored_report.json           # 모델별 요약 (점수만, 2K)
+ml/finetune/outputs/stage_c/scored_cot.jsonl             # 828 채점 (CoT, 816K)
+ml/finetune/outputs/stage_c/scored_cot_report.json       # 모델별 요약 (CoT, 2K)
+ml/finetune/outputs/stage_c/report.md                    # voice/pattern breakdown (4.5K)
 ```
 
 ## 6.4 로그
@@ -833,4 +924,4 @@ git log --oneline -10
 
 **최종 갱신**: 2026-04-11
 **버전**: v1.0
-**다음 갱신 예정**: Stage C 완료 후 §5 채워넣기
+**최종 갱신**: 2026-04-11 (Stage C 완료, §5 채워넣음)

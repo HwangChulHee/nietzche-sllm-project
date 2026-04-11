@@ -45,7 +45,7 @@
 ## 1.3 발표 일정
 
 - **발표일**: 2026-04-13
-- **현재 단계**: Stage C 진행 중 (LLM judge 채점 예정)
+- **현재 단계**: Stage C 완료 (2026-04-11). 발표 자료 작성 단계.
 
 ## 1.4 주요 결정
 
@@ -71,15 +71,15 @@
 [Stage 0]            [Stage 0.7]          [Stage 0.5]          [Stage 0.9]          [Stage A]            [학습]               [Stage B]            [Stage C]
 원전 청킹       →    한국어 재구성   →    5축 LLM 채점   →    SFT 생성       →    품질 관리       →    LoRA 파인튜닝   →    응답 생성       →    채점
 
-5권 영어 텍스트     Gemma 4 26B          Gemma 4 26B           청크당 3개          Clean → Score        Gemma 4 31B          baseline + 5        Q1/Q2/Q3
-                    (한국어로 재작성)     (한국어로 채점)        (한 호출에 3개)      → Dedup → Select    + LoRA r=16          epochs 평가          breakdown
-                                         + 책별 통과 조건                                                5 epochs
+5권 영어 텍스트     Gemma 4 26B          Gemma 4 26B           청크당 3개          Clean → Score        Gemma 4 31B          baseline + 5        Gemma 4 26B judge
+                    (한국어로 재작성)     (한국어로 채점)        (한 호출에 3개)      → Dedup → Select    + LoRA r=16          epochs 평가          Q1/Q2/Q3 + CoT
+                                         + 책별 통과 조건                                                5 epochs                                  + collapse heuristic
 
-v2_data/            v2_data/             v2_data/              v2_data/             v2_data/             finetune/            finetune/outputs/    (작성 예정)
-  english_raw/        reconstructed/       filtered/             sft_candidates/      sft_dataset/          outputs/              stage_b/
-  english_chunks/     (973, 1:1)           (973 + scores         (~2780)             (train/eval)         nietzsche-lora-31b/
-  (973)                                    + passed flag)
-                                           928 passed
+v2_data/            v2_data/             v2_data/              v2_data/             v2_data/             finetune/            finetune/outputs/    finetune/outputs/
+  english_raw/        reconstructed/       filtered/             sft_candidates/      sft_dataset/          outputs/              stage_b/              stage_c/
+  english_chunks/     (973, 1:1)           (973 + scores         (~2780)             (train/eval)         nietzsche-lora-31b/   responses.jsonl       scored.jsonl
+  (973)                                    + passed flag)                                                                       (828)                 scored_cot.jsonl
+                                           928 passed                                                                                                 (828 × 2)
 ```
 
 ### filtered/ 디렉토리 주의사항
@@ -105,7 +105,8 @@ True인 928개만 사용합니다.
 | 학습 | `finetune/scripts/train.py` | train.jsonl | LoRA 체크포인트 5개 | finetune |
 | Merge | `finetune/scripts/merge_one.py` | LoRA + base | merged 모델 (62GB) | finetune |
 | Stage B | `finetune/scripts/stage_b_generate.py` | merged + eval.jsonl | responses.jsonl | ml |
-| Stage C | (작성 예정) `stage_c_*.py` | responses.jsonl | scored 결과 | ml |
+| Stage C | `finetune/scripts/stage_c_score.py` | responses.jsonl + eval.jsonl | `stage_c/scored*.jsonl` | ml |
+| Stage C 리포트 | `finetune/scripts/stage_c_report.py` | scored.jsonl | `stage_c/report.md` | ml |
 
 > ⚠️ **중요**: Stage 0.7이 Stage 0.5보다 **먼저** 실행됩니다. LLM judge는
 > 한국어로 재구성된 텍스트를 채점합니다. 자세한 사항은 [DATA_SPEC.md §9.1](./DATA_SPEC.md) 참고.
@@ -163,11 +164,11 @@ ml/
 ├── docs/                          ⭐ 모든 문서 (지금 만들고 있는 곳)
 │   ├── DATA_SPEC.md               데이터셋 명세 (v10.0.1)
 │   ├── ARCHITECTURE.md            이 문서
-│   ├── PIPELINE.md                실행 가이드 (작성 예정)
-│   ├── SFT_STRATEGY.md            학습 전략 (작성 예정)
-│   ├── ENVIRONMENTS.md            환경 설정 (작성 예정)
-│   ├── RESULTS.md                 결과 정리 (작성 예정)
-│   ├── LLM_ONBOARDING.md          새 LLM 세션용 (작성 예정)
+│   ├── PIPELINE.md                실행 가이드
+│   ├── SFT_STRATEGY.md            학습 전략
+│   ├── ENVIRONMENTS.md            환경 설정
+│   ├── RESULTS.md                 결과 정리
+│   ├── LLM_ONBOARDING.md          새 LLM 세션용
 │   ├── GLOSSARY.md                니체 용어 매핑
 │   └── archived/
 │       └── REFACTOR_PLAN.md       (참고용 보관)
@@ -241,7 +242,10 @@ ml/
 │   │   ├── test_a_vllm_baseline.py  검증 테스트 A
 │   │   ├── test_b1_merge_epoch1.py  검증 테스트 B1 (peft 시도)
 │   │   ├── test_b1_merge_epoch1_unsloth.py  B1 (Unsloth, 성공)
-│   │   └── test_b2_vllm_merged.py   검증 테스트 B2
+│   │   ├── test_b2_vllm_merged.py   검증 테스트 B2
+│   │   ├── run_judge_server.sh      Stage C: judge vLLM 서버
+│   │   ├── stage_c_score.py         Stage C: 채점 (Q1/Q2/Q3 + CoT)
+│   │   └── stage_c_report.py        Stage C: breakdown 리포트
 │   ├── outputs/
 │   │   ├── nietzsche-lora-31b/    ⭐ LoRA 체크포인트 (4.4G, gitignore)
 │   │   │   ├── README.md          모델 카드
@@ -406,15 +410,17 @@ model.save_pretrained_merged(
 
 총 시간: 94분 (예상 170분의 절반, vLLM 캐시 효과)
 
-## 4.5 Stage C (작성 예정)
+## 4.5 Stage C
 
 | 컴포넌트 | 역할 | 파일 | venv |
 |---|---|---|---|
-| Judge Server | Gemma 4 26B-A4B 채점 서버 | `finetune/scripts/run_judge_server.sh` | ml |
-| Stage C Score | Q1/Q2/Q3 채점 | `finetune/scripts/stage_c_score.py` | ml |
-| Stage C Report | breakdown 리포트 | `finetune/scripts/stage_c_report.py` | ml |
+| Judge Server | Gemma 4 26B-A4B vLLM 서버 (Stage A와 동일) | `finetune/scripts/run_judge_server.sh` | ml |
+| Stage C Score | Q1/Q2/Q3 채점 + collapse heuristic + CoT(`--with-reasoning`) | `finetune/scripts/stage_c_score.py` | ml |
+| Stage C Report | 모델 × voice × pattern breakdown 마크다운 | `finetune/scripts/stage_c_report.py` | ml |
 
-`stage_a_score.py`를 복사 + 수정 예정 (입력 파일과 model_tag 보존만 다름).
+`stage_a_score.py` 패턴을 따르되, 입력은 `responses.jsonl × eval.jsonl` join,
+출력은 `model_tag` 보존 + 점수만 / CoT 두 모드 분리(`scored.jsonl` / `scored_cot.jsonl`).
+Collapse 응답은 judge 호출 없이 heuristic으로 (1,1,1)점 자동 부여.
 
 ---
 
@@ -489,11 +495,11 @@ model.save_pretrained_merged(
 |---|---|---|---|
 | **DATA_SPEC** | `ml/docs/DATA_SPEC.md` | 73K (v10.0.1) | ✓ 완료 |
 | **ARCHITECTURE** | `ml/docs/ARCHITECTURE.md` | (이 문서) | ✓ 작성 중 |
-| PIPELINE | `ml/docs/PIPELINE.md` | — | 작성 예정 |
-| SFT_STRATEGY | `ml/docs/SFT_STRATEGY.md` | — | 작성 예정 |
-| ENVIRONMENTS | `ml/docs/ENVIRONMENTS.md` | — | 작성 예정 |
-| RESULTS | `ml/docs/RESULTS.md` | — | 작성 예정 |
-| LLM_ONBOARDING | `ml/docs/LLM_ONBOARDING.md` | — | 작성 예정 |
+| PIPELINE | `ml/docs/PIPELINE.md` | — | ✓ 완료 |
+| SFT_STRATEGY | `ml/docs/SFT_STRATEGY.md` | — | ✓ 완료 |
+| ENVIRONMENTS | `ml/docs/ENVIRONMENTS.md` | — | ✓ 완료 |
+| RESULTS | `ml/docs/RESULTS.md` | — | ✓ 완료 (Stage C 결과 포함) |
+| LLM_ONBOARDING | `ml/docs/LLM_ONBOARDING.md` | — | ✓ 완료 |
 | GLOSSARY | `ml/docs/GLOSSARY.md` | 1K | ✓ |
 | (보관) REFACTOR_PLAN | `ml/docs/archived/REFACTOR_PLAN.md` | 13K | ✓ |
 
@@ -515,7 +521,7 @@ model.save_pretrained_merged(
 | 모델 | 출처 | 용도 |
 |---|---|---|
 | `google/gemma-4-31B-it` | HF Hub | 학습 베이스 + Stage B baseline |
-| `google/gemma-4-26B-A4B-it` | HF Hub | Stage A LLM judge + Stage C judge |
+| `google/gemma-4-26B-A4B-it` | HF Hub | Stage A judge + Stage C judge (점수만 + CoT) |
 | `BAAI/bge-m3` | HF Hub | Stage A-3 dedup 임베딩 |
 
 ## 6.3 핵심 라이브러리
