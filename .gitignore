@@ -96,3 +96,8 @@ htmlcov/
 .claude/worktrees/
 .claude/settings.local.json
 .claude/.session/
+# =====================
+# SQLite (dev/demo)
+# =====================
+*.db
+*.db-journal
