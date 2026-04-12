@@ -8,39 +8,57 @@ export function MessageBubble({ message }: Props) {
   const isUser = message.role === "user";
 
   return (
-    <div className={`flex flex-col gap-1 ${isUser ? "items-end" : "items-start"}`}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "8px",
+        alignItems: isUser ? "flex-end" : "flex-start",
+      }}
+    >
       <span
-        className="text-xs"
         style={{
+          fontSize: "13px",
           fontFamily: "var(--font-serif)",
-          color: "var(--text-secondary)",
+          fontWeight: 600,
+          letterSpacing: "0.08em",
+          color: isUser ? "var(--text-secondary)" : "var(--accent)",
+          textTransform: "uppercase",
         }}
       >
-        {isUser ? "나" : "니체"}
+        {isUser ? "나" : "Nietzsche"}
       </span>
       <div
-        className="max-w-[80%] px-5 py-3"
         style={{
+          maxWidth: "85%",
+          padding: isUser ? "14px 20px" : "4px 0 4px 20px",
           fontFamily: "var(--font-serif)",
           fontSize: "16px",
-          lineHeight: "1.7",
-          borderRadius: "2px",
+          lineHeight: "1.85",
+          color: "var(--text-primary)",
           ...(isUser
             ? {
-                backgroundColor: "var(--bg-secondary)",
-                color: "var(--text-primary)",
+                backgroundColor: "#e8e3d6",
+                border: "1px solid #d8d2c2",
+                borderRadius: "3px",
               }
             : {
-                backgroundColor: "transparent",
-                color: "var(--text-primary)",
+                borderLeft: "3px solid var(--accent)",
               }),
         }}
       >
         {message.content}
         {message.streaming && (
           <span
-            className="ml-1 inline-block h-4 w-0.5 animate-pulse"
-            style={{ backgroundColor: "var(--text-primary)", opacity: 0.6 }}
+            style={{
+              display: "inline-block",
+              width: "2px",
+              height: "1.1em",
+              marginLeft: "4px",
+              verticalAlign: "text-bottom",
+              backgroundColor: "var(--accent)",
+              animation: "pulse 1.2s ease-in-out infinite",
+            }}
           />
         )}
       </div>

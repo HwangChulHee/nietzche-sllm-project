@@ -44,6 +44,18 @@ export const fetchMessages = createAsyncThunk(
   },
 );
 
+export const deleteConversation = createAsyncThunk(
+  "chat/deleteConversation",
+  async (conversationId: string) => {
+    const res = await fetch(
+      `${API_BASE}/api/v1/conversations/${conversationId}`,
+      { method: "DELETE" },
+    );
+    if (!res.ok) throw new Error("대화 삭제 실패");
+    return conversationId;
+  },
+);
+
 // ─── Slice ───────────────────────────────────────────
 
 const chatSlice = createSlice({
@@ -99,6 +111,10 @@ const chatSlice = createSlice({
       .addCase(fetchMessages.pending, (state) => {
         state.messagesLoading = true;
         state.error = null;
+      })
+      .addCase(deleteConversation.fulfilled, (state) => {
+        state.messages = [];
+        state.currentConversationId = null;
       })
       .addCase(fetchMessages.fulfilled, (state, action) => {
         state.currentConversationId = action.payload.conversation_id;

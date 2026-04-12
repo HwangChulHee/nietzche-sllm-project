@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  allowedDevOrigins: ["ran-activated-search-legends.trycloudflare.com"],
 };
 
 export default nextConfig;

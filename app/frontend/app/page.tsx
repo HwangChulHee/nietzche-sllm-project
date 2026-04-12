@@ -2,13 +2,10 @@
 
 import { useEffect, useRef } from "react";
 import { MessageBubble } from "@/components/chat/MessageBubble";
-import { ChatInput } from "@/components/chat/ChatInput";
 import { useAppSelector } from "@/lib/hooks/useAppDispatch";
-import { useStreamingChat } from "@/lib/hooks/useStreamingChat";
 
 export default function Home() {
-  const { messages, isStreaming, error } = useAppSelector((s) => s.chat);
-  const { sendMessage } = useStreamingChat();
+  const { messages, error } = useAppSelector((s) => s.chat);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -17,49 +14,53 @@ export default function Home() {
 
   const isEmpty = messages.length === 0;
 
-  return (
-    <>
-      <main className="flex-1 overflow-y-auto py-6 px-6">
-        <div className="max-w-[720px] mx-auto">
-          {isEmpty ? (
-            <div className="flex flex-col items-center justify-center py-32 gap-4">
-              <p
-                className="text-lg italic"
-                style={{
-                  fontFamily: "var(--font-serif)",
-                  color: "var(--text-secondary)",
-                }}
-              >
-                &ldquo;무엇이 그대를 심연으로 이끌었는가?&rdquo;
-              </p>
-              <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
-                아래에 고민을 적어보세요.
-              </p>
-            </div>
-          ) : (
-            <div className="flex flex-col gap-7 py-4">
-              {messages.map((msg, i) => (
-                <MessageBubble key={i} message={msg} />
-              ))}
-              {error && (
-                <p className="text-xs text-center" style={{ color: "var(--accent)" }}>
-                  {error}
-                </p>
-              )}
-              <div ref={bottomRef} />
-            </div>
-          )}
-        </div>
-      </main>
-
-      <footer
-        className="py-4 px-6 shrink-0"
-        style={{ borderTop: "1px solid var(--border-color)" }}
+  if (isEmpty) {
+    return (
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: "16px",
+          padding: "120px 0",
+        }}
       >
-        <div className="max-w-[720px] mx-auto">
-          <ChatInput onSend={sendMessage} disabled={isStreaming} />
-        </div>
-      </footer>
-    </>
+        <p
+          style={{
+            fontFamily: "var(--font-serif)",
+            fontSize: "20px",
+            fontStyle: "italic",
+            color: "var(--text-secondary)",
+            textAlign: "center",
+          }}
+        >
+          &ldquo;무엇이 그대를 심연으로 이끌었는가?&rdquo;
+        </p>
+        <p
+          style={{
+            fontFamily: "var(--font-serif)",
+            fontSize: "14px",
+            color: "var(--text-secondary)",
+          }}
+        >
+          아래에 고민을 적어보세요.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "32px", padding: "16px 0" }}>
+      {messages.map((msg, i) => (
+        <MessageBubble key={i} message={msg} />
+      ))}
+      {error && (
+        <p style={{ fontSize: "13px", textAlign: "center", color: "var(--accent)" }}>
+          {error}
+        </p>
+      )}
+      <div ref={bottomRef} />
+    </div>
   );
 }

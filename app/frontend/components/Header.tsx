@@ -1,45 +1,79 @@
 "use client";
 
-import Link from "next/link";
-import { useAppDispatch } from "@/lib/hooks/useAppDispatch";
-import { clearChat } from "@/lib/store/chatSlice";
+import { useRouter } from "next/navigation";
+import { Trash2 } from "lucide-react";
+import { useAppDispatch, useAppSelector } from "@/lib/hooks/useAppDispatch";
+import { deleteConversation } from "@/lib/store/chatSlice";
 
 export function Header() {
   const dispatch = useAppDispatch();
+  const router = useRouter();
+  const currentConversationId = useAppSelector((s) => s.chat.currentConversationId);
+
+  const handleDelete = async () => {
+    if (!currentConversationId) return;
+    const ok = window.confirm("이 대화를 삭제하시겠습니까?");
+    if (!ok) return;
+    await dispatch(deleteConversation(currentConversationId));
+    router.replace("/");
+  };
 
   return (
     <header
-      className="flex items-center justify-between py-8 px-6 shrink-0"
-      style={{ borderBottom: "1px solid var(--border-color)" }}
+      style={{
+        padding: "20px 32px",
+        borderBottom: "1px solid var(--border-color)",
+        backgroundColor: "var(--bg-primary)",
+        flexShrink: 0,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+      }}
     >
-      <div className="flex-1" />
-      <div className="flex flex-col items-center">
-        <h1
-          className="text-2xl tracking-tight"
-          style={{ fontFamily: "var(--font-serif)" }}
-        >
-          니체 페르소나 sLLM 상담
-        </h1>
-        <p className="text-sm mt-1" style={{ color: "var(--text-secondary)" }}>
-          캡스톤 디자인 데모
-        </p>
-      </div>
-      <div className="flex-1 flex justify-end">
-        <Link
-          href="/"
-          onClick={() => dispatch(clearChat())}
-          className="text-sm px-3 py-1"
+      <h1
+        style={{
+          fontFamily: "var(--font-serif)",
+          fontSize: "20px",
+          fontWeight: 600,
+          color: "var(--text-primary)",
+          letterSpacing: "0.02em",
+          margin: 0,
+        }}
+      >
+        니체 페르소나 sLLM 상담
+      </h1>
+
+      {currentConversationId && (
+        <button
+          onClick={handleDelete}
+          aria-label="대화 삭제"
           style={{
-            fontFamily: "var(--font-serif)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "38px",
+            height: "38px",
+            backgroundColor: "transparent",
             color: "var(--text-secondary)",
             border: "1px solid var(--border-color)",
-            borderRadius: "2px",
-            textDecoration: "none",
+            borderRadius: "3px",
+            cursor: "pointer",
+            transition: "all 0.15s ease",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = "var(--accent)";
+            e.currentTarget.style.borderColor = "var(--accent)";
+            e.currentTarget.style.backgroundColor = "rgba(139, 46, 31, 0.06)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = "var(--text-secondary)";
+            e.currentTarget.style.borderColor = "var(--border-color)";
+            e.currentTarget.style.backgroundColor = "transparent";
           }}
         >
-          새 대화
-        </Link>
-      </div>
+          <Trash2 size={18} strokeWidth={1.5} />
+        </button>
+      )}
     </header>
   );
 }

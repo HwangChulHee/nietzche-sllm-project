@@ -1,4 +1,9 @@
 @import "tailwindcss";
+@source "/workspace/nietzche-sllm-project/app/frontend/app";
+@source "/workspace/nietzche-sllm-project/app/frontend/components";
+@source "/workspace/nietzche-sllm-project/app/frontend/lib";
+
+
 
 :root {
   --bg-primary: #f4f1ea;
@@ -33,4 +38,10 @@ body {
 textarea:focus {
   outline: none;
   border-color: var(--text-secondary) !important;
+}
+
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
 }
