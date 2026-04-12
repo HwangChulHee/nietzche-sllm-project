@@ -129,3 +129,27 @@ async def get_messages(
 
 def _sse(data: dict) -> str:
     return f"data: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+# ───────────────────────────────────────────────────────
+# DELETE /conversations/{id} — 대화 삭제
+# ───────────────────────────────────────────────────────
+
+@router.delete("/conversations/{conversation_id}")
+async def delete_conversation(
+    conversation_id: UUID,
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(Conversation).where(Conversation.id == conversation_id)
+    )
+    conv = result.scalar_one_or_none()
+    if not conv:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="대화를 찾을 수 없습니다.",
+        )
+    await db.delete(conv)
+    await db.commit()
+    return {"deleted": True, "conversation_id": str(conversation_id)}
+

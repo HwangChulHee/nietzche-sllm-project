@@ -129,3 +129,7 @@ ml/finetune/wandb/
 # Stage B 실행 로그 (수 MB, 디버깅/재현용)
 !ml/finetune/logs/
 !ml/finetune/logs/*.log
+# Runtime artifacts (added 2026-04-12)
+app/backend/nietzsche.db
+app/backend/*.db
+app/backend/*.db-journal

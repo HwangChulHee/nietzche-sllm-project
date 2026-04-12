@@ -87,7 +87,7 @@ class VLLMClient(LLMClient):
             model=self.model,
             messages=messages,
             stream=True,
-            temperature=0.8,
+            temperature=0.5,
             max_tokens=512,
         )
         async for chunk in stream:
