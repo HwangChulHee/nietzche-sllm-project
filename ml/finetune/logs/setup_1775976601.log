@@ -1,0 +1,110 @@
+nohup: ignoring input
+============================================
+[1/8] Workspace cache 환경변수 설정
+============================================
+============================================
+[2/8] Python 3.12 설치 확인
+============================================
+Python 3.12 없음 → 설치 중...
+
+WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
+
+Get:1 http://archive.ubuntu.com/ubuntu jammy InRelease [270 kB]
+Get:2 http://security.ubuntu.com/ubuntu jammy-security InRelease [129 kB]
+Get:3 https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu jammy InRelease [18.1 kB]
+Get:4 http://archive.ubuntu.com/ubuntu jammy-updates InRelease [128 kB]
+Get:5 http://archive.ubuntu.com/ubuntu jammy-backports InRelease [127 kB]
+Get:6 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64  InRelease [1581 B]
+Get:7 http://archive.ubuntu.com/ubuntu jammy/restricted amd64 Packages [164 kB]
+Get:8 http://archive.ubuntu.com/ubuntu jammy/main amd64 Packages [1792 kB]
+Get:9 https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu jammy/main amd64 Packages [38.8 kB]
+Get:10 http://archive.ubuntu.com/ubuntu jammy/multiverse amd64 Packages [266 kB]
+Get:11 http://archive.ubuntu.com/ubuntu jammy/universe amd64 Packages [17.5 MB]
+Get:12 http://security.ubuntu.com/ubuntu jammy-security/multiverse amd64 Packages [62.6 kB]
+Get:13 http://security.ubuntu.com/ubuntu jammy-security/restricted amd64 Packages [6917 kB]
+Get:14 http://archive.ubuntu.com/ubuntu jammy-updates/universe amd64 Packages [1622 kB]
+Get:15 http://archive.ubuntu.com/ubuntu jammy-updates/restricted amd64 Packages [7143 kB]
+Get:16 http://archive.ubuntu.com/ubuntu jammy-updates/multiverse amd64 Packages [70.9 kB]
+Get:17 http://archive.ubuntu.com/ubuntu jammy-updates/main amd64 Packages [4226 kB]
+Get:18 http://security.ubuntu.com/ubuntu jammy-security/universe amd64 Packages [1311 kB]
+Get:19 http://security.ubuntu.com/ubuntu jammy-security/main amd64 Packages [3889 kB]
+Get:20 http://archive.ubuntu.com/ubuntu jammy-backports/main amd64 Packages [84.0 kB]
+Get:21 http://archive.ubuntu.com/ubuntu jammy-backports/universe amd64 Packages [35.6 kB]
+Get:22 https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2204/x86_64  Packages [2497 kB]
+Fetched 48.3 MB in 3s (15.7 MB/s)
+Reading package lists...
+Building dependency tree...
+Reading state information...
+146 packages can be upgraded. Run 'apt list --upgradable' to see them.
+
+WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
+
+Reading package lists...
+Building dependency tree...
+Reading state information...
+The following additional packages will be installed:
+  libpython3.12 libpython3.12-dev libpython3.12-stdlib
+The following NEW packages will be installed:
+  libpython3.12 libpython3.12-dev libpython3.12-stdlib python3.12 python3.12-dev python3.12-venv
+0 upgraded, 6 newly installed, 0 to remove and 146 not upgraded.
+Need to get 15.7 MB of archives.
+After this operation, 62.7 MB of additional disk space will be used.
+Get:1 https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu jammy/main amd64 libpython3.12-stdlib amd64 3.12.13-1+jammy1 [2866 kB]
+Get:2 https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu jammy/main amd64 libpython3.12 amd64 3.12.13-1+jammy1 [2375 kB]
+Get:3 https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu jammy/main amd64 libpython3.12-dev amd64 3.12.13-1+jammy1 [5693 kB]
+Get:4 https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu jammy/main amd64 python3.12 amd64 3.12.13-1+jammy1 [2517 kB]
+Get:5 https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu jammy/main amd64 python3.12-dev amd64 3.12.13-1+jammy1 [498 kB]
+Get:6 https://ppa.launchpadcontent.net/deadsnakes/ppa/ubuntu jammy/main amd64 python3.12-venv amd64 3.12.13-1+jammy1 [1796 kB]
+debconf: delaying package configuration, since apt-utils is not installed
+Fetched 15.7 MB in 21s (750 kB/s)
+Selecting previously unselected package libpython3.12-stdlib:amd64.
+(Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 24135 files and directories currently installed.)
+Preparing to unpack .../0-libpython3.12-stdlib_3.12.13-1+jammy1_amd64.deb ...
+Unpacking libpython3.12-stdlib:amd64 (3.12.13-1+jammy1) ...
+Selecting previously unselected package libpython3.12:amd64.
+Preparing to unpack .../1-libpython3.12_3.12.13-1+jammy1_amd64.deb ...
+Unpacking libpython3.12:amd64 (3.12.13-1+jammy1) ...
+Selecting previously unselected package libpython3.12-dev:amd64.
+Preparing to unpack .../2-libpython3.12-dev_3.12.13-1+jammy1_amd64.deb ...
+Unpacking libpython3.12-dev:amd64 (3.12.13-1+jammy1) ...
+Selecting previously unselected package python3.12.
+Preparing to unpack .../3-python3.12_3.12.13-1+jammy1_amd64.deb ...
+Unpacking python3.12 (3.12.13-1+jammy1) ...
+Selecting previously unselected package python3.12-dev.
+Preparing to unpack .../4-python3.12-dev_3.12.13-1+jammy1_amd64.deb ...
+Unpacking python3.12-dev (3.12.13-1+jammy1) ...
+Selecting previously unselected package python3.12-venv.
+Preparing to unpack .../5-python3.12-venv_3.12.13-1+jammy1_amd64.deb ...
+Unpacking python3.12-venv (3.12.13-1+jammy1) ...
+Setting up libpython3.12-stdlib:amd64 (3.12.13-1+jammy1) ...
+Setting up python3.12 (3.12.13-1+jammy1) ...
+Setting up libpython3.12:amd64 (3.12.13-1+jammy1) ...
+Setting up python3.12-venv (3.12.13-1+jammy1) ...
+Setting up libpython3.12-dev:amd64 (3.12.13-1+jammy1) ...
+Setting up python3.12-dev (3.12.13-1+jammy1) ...
+Processing triggers for mailcap (3.70+nmu1ubuntu1) ...
+Python 3.12.13
+============================================
+[3/8] Poetry 설치 확인
+============================================
+Poetry 없음 → 설치 중...
+Retrieving Poetry metadata
+
+# Welcome to Poetry!
+
+This will download and install the latest version of Poetry,
+a dependency and package manager for Python.
+
+It will add the `poetry` command to Poetry's bin directory, located at:
+
+/root/.local/bin
+
+You can uninstall at any time by executing this script with the --uninstall option,
+and these changes will be reverted.
+
+Installing Poetry (2.3.3)
+Installing Poetry (2.3.3): Creating environment
+Installing Poetry (2.3.3): An error occurred. Removing partial environment.
+Installing Poetry (2.3.3): Restoring previously saved environment.
+Poetry installation failed.
+See /workspace/nietzche-sllm-project/ml/finetune/poetry-installer-error-x3gqkgef.log for error logs.

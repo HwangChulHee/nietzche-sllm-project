@@ -1,0 +1,17 @@
+🦥 Unsloth: Will patch your computer to enable 2x faster free finetuning.
+Unsloth: Your Flash Attention 2 installation seems to be broken. Using Xformers instead. No performance changes will be seen.
+🦥 Unsloth Zoo will now patch everything to make training faster!
+[merge_one] === Merging epoch1 ===
+[merge_one] checkpoint: /workspace/nietzche-sllm-project/ml/finetune/outputs/nietzsche-lora-31b/checkpoint-144
+[merge_one] output:     /workspace/nietzche-sllm-project/ml/finetune/outputs/merged/epoch1
+[merge_one] [1/3] Loading base + adapter via Unsloth...
+==((====))==  Unsloth 2026.4.4: Fast Gemma4 patching. Transformers: 5.5.0.
+   \\   /|    NVIDIA A100-SXM4-80GB. Num GPUs = 1. Max memory: 79.252 GB. Platform: Linux.
+O^O/ \_/ \    Torch: 2.6.0+cu124. CUDA: 8.0. CUDA Toolkit: 12.4. Triton: 3.2.0
+\        /    Bfloat16 = TRUE. FA [Xformers = 0.0.29.post3. FA2 = False]
+ "-____-"     Free license: http://github.com/unslothai/unsloth
+Unsloth: Fast downloading is enabled - ignore downloading bars which are red colored!
+Unsloth: QLoRA and full finetuning all not selected. Switching to 16bit LoRA.
+Fetching 2 files:   0%|                                                                                                                                                                       | 0/2 [00:00<?, ?it/s]Fetching 2 files:   0%|                                                                                                                                                                       | 0/2 [00:00<?, ?it/s]
+
+FAILED: OSError: [Errno 28] No space left on device: '/root/.cache/huggingface/hub/.locks/models--google--gemma-4-31B-it/eeef8791537bc04f110967c513149e037d2a9ae97d49add7291ebfa62806bbfa.lock'
