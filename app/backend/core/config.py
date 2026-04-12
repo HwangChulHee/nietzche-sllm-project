@@ -6,23 +6,20 @@ ENV_FILE = os.path.join(BASE_DIR, ".env")
 
 
 class Settings(BaseSettings):
+    # LLM
+    LLM_MODE: str = "mock"  # "mock" | "vllm"
+    LLM_BASE_URL: str = "http://localhost:8001/v1"
+    LLM_MODEL: str = "gemma-4-26b-a4b-nietzsche"
+    LLM_API_KEY: str = "dummy"
+
+    # 시스템 프롬프트
+    SYSTEM_PROMPT_FILE: str = "prompts/nietzsche_v1.txt"
+
     # Database
-    DATABASE_URL: str
+    DATABASE_URL: str = "postgresql+asyncpg://user:pass@localhost:5432/nietzsche_dev"
 
-    # Qdrant
-    QDRANT_URL: str = "http://localhost:6333"
-
-    # RunPod / vLLM
-    RUNPOD_API_KEY: str = ""
-    RUNPOD_ENDPOINT_ID: str = ""
-
-    # Embedding
-    EMBEDDING_MODEL: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
-
-    # JWT
-    JWT_SECRET_KEY: str = "change-me-in-production"
-    JWT_ALGORITHM: str = "HS256"
-    JWT_EXPIRE_MINUTES: int = 60 * 24  # 24시간
+    # CORS
+    CORS_ORIGINS: str = "http://localhost:3000"
 
     # 테스트 환경 여부
     TESTING: bool = False
@@ -32,11 +29,6 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
-
-    @property
-    def is_llm_available(self) -> bool:
-        """RunPod API 키가 설정되어 있으면 True."""
-        return bool(self.RUNPOD_API_KEY and self.RUNPOD_ENDPOINT_ID)
 
 
 settings = Settings()

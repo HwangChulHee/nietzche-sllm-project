@@ -1,27 +1,11 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Nanum_Myeongjo } from "next/font/google";
 import { Providers } from "./providers";
+import { Header } from "@/components/Header";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-const nanumMyeongjo = Nanum_Myeongjo({
-  weight: ["400", "700", "800"],
-  subsets: ["latin"],
-  variable: "--font-nanum", // CSS 변수명 설정
-})
-
 export const metadata: Metadata = {
-  title: "니체 AI 상담소",
-  description: "심연을 들여다보는 철학적 대화",
+  title: "니체 sLLM 상담",
+  description: "니체 페르소나 sLLM 기반 철학 상담",
 };
 
 export default function RootLayout({
@@ -30,12 +14,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="en"
-      className={`${nanumMyeongjo.variable} font-serif min-h-full flex flex-col bg-background text-foreground antialiased`}
-    >
-      <body className="min-h-full flex flex-col">
-        <Providers>{children}</Providers>
+    <html lang="ko">
+      <body>
+        <Providers>
+          <div
+            className="flex min-h-screen flex-col"
+            style={{
+              backgroundColor: "var(--bg-primary)",
+              color: "var(--text-primary)",
+            }}
+          >
+            <Header />
+            {children}
+          </div>
+        </Providers>
       </body>
     </html>
   );

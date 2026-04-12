@@ -9,19 +9,39 @@ export function MessageBubble({ message }: Props) {
 
   return (
     <div className={`flex flex-col gap-1 ${isUser ? "items-end" : "items-start"}`}>
-      <span className="text-xs font-semibold opacity-40">
+      <span
+        className="text-xs"
+        style={{
+          fontFamily: "var(--font-serif)",
+          color: "var(--text-secondary)",
+        }}
+      >
         {isUser ? "나" : "니체"}
       </span>
       <div
-        className={`max-w-[80%] rounded-lg px-4 py-3 leading-7 ${
-          isUser
-            ? "bg-zinc-800 text-zinc-100 dark:bg-zinc-700"
-            : "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100"
-        }`}
+        className="max-w-[80%] px-5 py-3"
+        style={{
+          fontFamily: "var(--font-serif)",
+          fontSize: "16px",
+          lineHeight: "1.7",
+          borderRadius: "2px",
+          ...(isUser
+            ? {
+                backgroundColor: "var(--bg-secondary)",
+                color: "var(--text-primary)",
+              }
+            : {
+                backgroundColor: "transparent",
+                color: "var(--text-primary)",
+              }),
+        }}
       >
         {message.content}
         {message.streaming && (
-          <span className="ml-1 inline-block h-4 w-0.5 animate-pulse bg-current opacity-70" />
+          <span
+            className="ml-1 inline-block h-4 w-0.5 animate-pulse"
+            style={{ backgroundColor: "var(--text-primary)", opacity: 0.6 }}
+          />
         )}
       </div>
     </div>
