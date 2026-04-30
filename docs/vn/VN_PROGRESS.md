@@ -8,13 +8,57 @@
 ## 현재 상태 요약
 
 **최종 업데이트**: 2026-05-01
-**현재 Phase**: 2 완료 / Phase 3 대기
-**상태**: 🟢 백엔드 Mock 8개 엔드포인트 동작, 프론트 라우팅 작업 시작 가능
+**현재 Phase**: 3 완료 / Phase 4 대기
+**상태**: 🟢 프론트 라우팅 8개 + Redux 5 slices + API 클라이언트 + CSS 페이드 동작. 백엔드 Mock SSE 라이브 검증 통과.
 **모드**: 백엔드 `LLM_MODE=mock`
 
 ---
 
 ## 변경 로그 (최신순)
+
+### 2026-05-01 — Phase 3 완료 (프론트 라우팅 + Redux 골격)
+
+#### 작업
+- 옛 챗봇 자산 `archived/frontend/`로 이동: `app/chat/[conversationId]/page.tsx`, `lib/hooks/useStreamingChat.ts`, `lib/store/chatSlice.ts`
+- 라우팅 신설: `app/page.tsx` (타이틀 + SSE 검증 위젯), `app/load/page.tsx`, `app/ep1/scene/[id]/page.tsx`, `app/ep1/ending/page.tsx`, `app/ep2/transition/page.tsx`, `app/ep2/scene/[id]/page.tsx`, `app/ep2/ending/page.tsx`
+- 공통 컨테이너: `app/vn-frame.tsx` (`key={pathname}` remount → CSS 페이드 재실행), `app/providers.tsx` (Redux Provider), `app/layout.tsx` 갱신
+- Redux slices 5개: `episodeSlice` (episode/sceneIndex/mode), `dialogueSlice` (인터랙션 메시지 + streaming 상태머신 + userTurns), `haeseolSlice` (해설 패널 + 동적 풀이 누적), `saveSlice` (단일 슬롯 캐시), `uiSlice` (fade/toast/modal)
+- `lib/store/index.ts`로 store 구성, `lib/hooks/useAppDispatch.ts` 추가
+- API 클라이언트 (`lib/api/`): `sse.ts` 공통 SSE 파서 + `persona.ts` (respond/respond/auto/respond/farewell) + `explain.ts` + `summarize.ts` + `save.ts` (GET/POST/DELETE) + `types.ts`
+- 페이드 시스템: `globals.css`의 `.vn-page` + `vn-fade-in` 600ms 키프레임 + `--vn-page--slow` 800ms 옵션 (#4→#5 분위기 전환점)
+- VN 디자인 토큰 추가 (`--vn-bg`, `--vn-ink`, `--vn-font-serif` 등) — Phase 5에서 본격 활용
+
+#### 산출물 — 라우팅 매트릭스
+| 라우트 | 컴포넌트 | 상태 |
+|---|---|---|
+| `/` | `app/page.tsx` | placeholder + SSE 검증 위젯 (Phase 4에서 TitleScreen으로 대체) |
+| `/load` | `app/load/page.tsx` | placeholder (Phase 7에서 슬롯 모달) |
+| `/ep1/scene/[id]` | `app/ep1/scene/[id]/page.tsx` | #2~#7 동적 (Phase 4/6에서 NarrationScreen/InteractionScreen) |
+| `/ep1/ending` | `app/ep1/ending/page.tsx` | placeholder (Phase 4에서 EndingCard) |
+| `/ep2/transition` | `app/ep2/transition/page.tsx` | placeholder (Phase 8에서 TransitionEp2) |
+| `/ep2/scene/[id]` | `app/ep2/scene/[id]/page.tsx` | placeholder (Phase 8) |
+| `/ep2/ending` | `app/ep2/ending/page.tsx` | placeholder (Phase 8) |
+
+#### 검증
+- [x] `npx tsc --noEmit` 무에러 (전체 타입 통과, archived/ 이동 후 잔존 import 깨짐 없음)
+- [x] `npm run lint` 무에러 (ESLint clean)
+- [x] 백엔드 mock + 프론트 dev 동시 기동 성공 (`/health` `{"mode":"mock"}` 응답)
+- [x] 8개 라우트 모두 200 응답 (`/`, `/load`, `/ep1/scene/{2,5}`, `/ep1/ending`, `/ep2/transition`, `/ep2/scene/1`, `/ep2/ending`)
+- [x] `POST /api/v1/respond/auto` SSE 라이브 스트리밍 검증 (metadata + delta 정상 수신)
+- [x] `POST /api/v1/explain` SSE 라이브 스트리밍 검증
+- [ ] `/save` 계열은 여전히 DB 미적용으로 500 (Phase 2부터 누적된 한계 — alembic 미실행)
+
+#### 알려진 한계
+- **DB 미적용 누적**: Phase 2부터 Alembic 002 미실행 상태. `/save` GET은 500. Phase 7 (세이브 시스템 구현) 또는 시연 셋업 시점에 `alembic upgrade head` 필요.
+- **타이틀/엔딩/화면 컴포넌트 X**: 모든 라우트가 placeholder. Phase 4부터 본격 컴포넌트 마운트.
+- **VnFrame 16:10 비율 미적용**: 현재 풀-vh. Phase 5 책 삽화 레이아웃에서 16:10 frame으로 교체.
+- **`#4 → #5` 800ms 슬로우 페이드**: CSS 클래스(`.vn-page--slow`)는 정의됐으나 페이지 컴포넌트가 자체 클래스 적용은 Phase 5 범위.
+
+#### 다음 Phase
+- **Phase 4: 정적 나레이션 컴포넌트 + 텍스트 데이터**
+- 입력: `VN_UI_POLICY.md` §2 (정적 나레이션 정책 전부) + `EP1_TEXT_AND_PROMPTS.md` §5 #1~#4, #8 (정적 텍스트 본문)
+- 핵심 작업: `NarrationScreen`/`EndingCard`/`TitleScreen` 컴포넌트 + `data/scenes/ep1_screen{2,3,4,8}.ts` + 키보드 단축키 (Space/Enter)
+- 사용자 확인 필요: 데이터 파일 경로 (`data/scenes/` vs `lib/scenes/` 등)
 
 ### 2026-05-01 — Phase 2 완료 (백엔드 인터페이스 + Mock 구현)
 
@@ -129,7 +173,7 @@
 | 0 | 컨텍스트 준비 | ✅ 완료 (2026-04-30) |
 | 1 | 저장소 정리 + 문서 push | ✅ 완료 (2026-05-01) |
 | 2 | 백엔드 인터페이스 + Mock 구현 | ✅ 완료 (2026-05-01) |
-| 3 | 프론트 라우팅 + Redux 골격 | ⏳ 대기 |
+| 3 | 프론트 라우팅 + Redux 골격 | ✅ 완료 (2026-05-01) |
 | 4 | 정적 나레이션 컴포넌트 + 텍스트 | ⏳ 대기 |
 | 5 | 책 삽화 레이아웃 + 페이드 + 일러스트 placeholder | ⏳ 대기 |
 | 6 | 인터랙션 컴포넌트 | ⏳ 대기 |
@@ -161,6 +205,15 @@
 - DB는 PostgreSQL 유지 (기존 셋업 그대로). VN_AGENTS.md §1의 SQLite 표기는 README 정정 시점에 처리.
 - 신규 단위/통합 테스트 미작성 (VN_AGENTS.md §3.5 *"단위 테스트 작성 시간 낭비"*). curl + smoke import로 종료 조건 충족.
 
+### Phase 3
+- **페이드 transition 라이브러리 도입 X — CSS-only로 결정**. `key={pathname}` remount + `@keyframes vn-fade-in` 600ms로 충분. framer-motion 등 추가 의존성 없음. 근거: Phase 5 책 삽화 레이아웃에서도 동일 메커니즘으로 확장 가능, 의존성 최소화 (VN_AGENTS.md §3.5 "추가 라이브러리 도입 신중").
+- **라우팅 구조**: `/ep1/scene/[id]` 동적 (`/ep1/2`가 아닌 `/ep1/scene/2`). 화면 인덱스가 URL의 어디에 박혀있는지 명시적이라 디버깅/시연이 편함.
+- **Redux store는 URL의 미러**: 페이지 컴포넌트가 `useEffect`로 mount 시 `enterScene` dispatch. URL이 single source of truth, slice는 컴포넌트 간 공유 캐시.
+- **`useAppDispatch` 헬퍼 신설**: 타입 추론용 (`AppDispatch`). useSelector 헬퍼는 Phase 4에서 첫 사용처 발생 시 추가.
+- **타이틀 페이지(`app/page.tsx`)에 SSE 검증 위젯 임시 부착**: `<details>` 안 `/respond/auto` 호출 버튼. Phase 4 TitleScreen 도입 시 제거.
+- **SSE 응답 스키마**: 백엔드의 `metadata`/`delta`/`done`/`error` 4종 이벤트를 `streamSSE`가 공통 파싱. 콜백 객체 패턴 (`onMetadata`/`onDelta`/`onDone`/`onError`).
+- **API base URL**: `process.env.NEXT_PUBLIC_API_BASE` (기본 `http://localhost:8000`). 환경별 swap 가능.
+
 ---
 
 ## 알려진 이슈 / 한계
@@ -171,6 +224,10 @@
 - **Phase 2**: PostgreSQL 미기동으로 Alembic 002 미적용. `/save` 계열 3개 엔드포인트는 import 검증만 통과. Phase 3 시작 시 또는 시연 셋업 시 `alembic upgrade head` 필요.
 - **Phase 2**: VLLM 구현체(`VLLMPersonaClient` 등)는 Phase 9 범위로 미검증. Mock 모드 토글만 동작.
 - **Phase 2**: `app/backend/README.md`, `app/backend/BACKEND_STRUCTURE.md`, `app/backend/CLAUDE.md`에 옛 환경변수 이름과 챗봇 컨셉 잔재. 별도 문서 정리 PR 필요.
+- **Phase 3**: `app/frontend/CLAUDE.md`, `app/frontend/AGENTS.md`도 옛 챗봇 컨셉 잔재 (채팅 컴포넌트 폴더 구조 등). 별도 문서 정리 시 처리.
+- **Phase 3**: 모든 라우트가 placeholder. Phase 4부터 컴포넌트 본격 마운트.
+- **Phase 3**: `archived/frontend/` 트리는 옛 챗봇 자산 보존용. 이전 Phase 1 `archived/components/`, `archived/prompts/`와 별도 트리.
+- **Phase 3**: `LoadPage`가 라우트(`/load`)로 분리됐으나 VN_UI_POLICY는 *불러오기 모달*로 정의. Phase 7에서 모달로 교체할지, 라우트로 유지할지 결정 필요.
 
 ---
 
@@ -231,6 +288,31 @@ curl -X POST http://localhost:8000/api/v1/summarize \
 curl http://localhost:8000/api/v1/save  # null (빈 슬롯) 또는 SaveSlot JSON
 ```
 
+### Phase 3 (프론트 라우팅 + Redux 골격)
+```bash
+# 프론트 dev (포트 3000)
+cd app/frontend && npm run dev
+
+# 백엔드 mock 동시 기동 (포트 8000)
+cd app/backend && PYTHONPATH=. poetry run uvicorn main:app --port 8000
+
+# 정적 검증
+cd app/frontend && npx tsc --noEmit   # TS 무에러
+cd app/frontend && npm run lint        # ESLint clean
+
+# 라우트 모두 200
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000/
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000/load
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000/ep1/scene/2
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000/ep1/scene/5
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000/ep1/ending
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000/ep2/transition
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000/ep2/scene/1
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000/ep2/ending
+
+# SSE 라이브 (브라우저에서 / 페이지 → backend SSE 검증 위젯 → /api/v1/respond/auto 호출)
+```
+
 ### (이후 Phase는 작업 끝날 때 추가)
 
 ---
@@ -240,3 +322,4 @@ curl http://localhost:8000/api/v1/save  # null (빈 슬롯) 또는 SaveSlot JSON
 - 2026-04-30: 초안 작성. Phase 0 완료 라인 추가.
 - 2026-05-01: Phase 1 완료 라인 추가 (저장소 정리 + 문서 push).
 - 2026-05-01: Phase 2 완료 라인 추가 (백엔드 인터페이스 + Mock 구현, 8개 엔드포인트).
+- 2026-05-01: Phase 3 완료 라인 추가 (프론트 라우팅 8개 + Redux 5 slices + API 클라이언트 + CSS 페이드).

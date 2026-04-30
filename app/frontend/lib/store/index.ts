@@ -1,9 +1,18 @@
 import { configureStore } from "@reduxjs/toolkit";
-import chatReducer from "./chatSlice";
+
+import dialogueReducer from "./dialogueSlice";
+import episodeReducer from "./episodeSlice";
+import haeseolReducer from "./haeseolSlice";
+import saveReducer from "./saveSlice";
+import uiReducer from "./uiSlice";
 
 export const store = configureStore({
   reducer: {
-    chat: chatReducer,
+    episode: episodeReducer,
+    dialogue: dialogueReducer,
+    haeseol: haeseolReducer,
+    save: saveReducer,
+    ui: uiReducer,
   },
 });
 
