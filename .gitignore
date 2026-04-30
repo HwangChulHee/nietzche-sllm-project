@@ -133,3 +133,8 @@ ml/finetune/wandb/
 app/backend/nietzsche.db
 app/backend/*.db
 app/backend/*.db-journal
+
+# =====================
+# VN 일러스트 — PNG 원본 (수십 MB, WebP만 커밋)
+# =====================
+app/frontend/public/illustrations/*.png
