@@ -673,6 +673,29 @@ body {
   cursor: not-allowed;
 }
 
+/* ─── Transition Ep2 (Ep 1 → Ep 2 카운드오버) ────── */
+
+.vn-transition-ep2 {
+  width: 100%;
+  height: 100%;
+  background: var(--vn-letterbox);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--vn-font-serif);
+}
+
+.vn-transition-ep2__text {
+  color: var(--vn-bg-darker);
+  font-style: italic;
+  letter-spacing: 0.12em;
+  font-size: 22px;
+  line-height: 2;
+  text-align: center;
+  opacity: 0;
+  animation: vn-fade-in 600ms ease 200ms forwards;
+}
+
 /* ─── Save Button (#5~#7 우상단) ────────────────── */
 
 .vn-save {

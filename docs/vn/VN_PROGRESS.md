@@ -8,13 +8,59 @@
 ## 현재 상태 요약
 
 **최종 업데이트**: 2026-05-01
-**현재 Phase**: 7 완료 / Phase 8 대기
-**상태**: 🟢 Ep 1 풀 사이클(타이틀 → 정적 나레이션 + 해설 패널 → 인터랙션 + 저장/불러오기 → 엔딩)이 Mock 모드로 동작. [해설] 패널·[저장]·[불러오기]·뒤로 가기·전환 오버레이 모두 라이브. Ep 2 정적 풀이 3개도 데이터로 미리 준비.
+**현재 Phase**: 8 완료 / Phase 9 대기 (vLLM 실제 연결 + RAG)
+**상태**: 🟢 **Ep 1 + Ep 2 풀 사이클 완성**. 타이틀 → Ep 1 (정적 나레이션 #2~#4 + 해설 + 인터랙션 #5~#7 + 저장/불러오기 + 엔딩 #8) → 카운드오버 transition → Ep 2 (정적 나레이션 #1~#3 + 해설 + 인터랙션 #4 + 엔딩) → 타이틀 복귀 모두 Mock 모드로 동작. 시연 대본 작성.
 **모드**: 백엔드 `LLM_MODE=mock`
 
 ---
 
 ## 변경 로그 (최신순)
+
+### 2026-05-01 — Phase 8 완료 (Ep 2 통합 + transition + 시연 대본)
+
+#### 작업
+- **Ep 2 데이터 5개 (사용자 작성 본문)**: `data/scenes/ep2_screen1_market_arrival.ts` (5단락) + `ep2_screen2_uebermensch.ts` (8단락) + `ep2_screen3_clown_fall.ts` (18단락 — 원본 16단락에서 *narration 안 발화 인용*은 quote 단락 분리) + `ep2_screen4_reunion.ts` (auto + farewell) + `ep2_ending.ts`
+- **Ep 2 강조 마커 적용**: `**위버멘쉬**`, `**마지막 인간**`, `**차라투스트라의 마음이 슬퍼졌다.\n그리고 무거워졌다.**`, `**인간은 짐승과 위버멘쉬 사이에 매인 밧줄이다...**` (밧줄 잠언), `**나는 그대를 내 손으로 묻으리라.**`, `**차라투스트라는 죽은 자를 등에 졌다.\n그리고 길을 떠났다.**`
+- **TransitionEp2 컴포넌트**: 검은 배경 (`var(--vn-letterbox)`) + 옅은 세피아 italic 텍스트 *"밤이 깊었다.\n시간은 흘러, 시장의 새벽이 왔다."* + 200ms 정적 → 600ms 페이드인 → 3000ms 정적 → `useNavigate("/ep2/scene/1")`. 백그라운드 요약 sLLM은 Phase 9로 미룸 (시각 흐름만).
+- **Ep 2 라우트 마운트**: `/ep2/transition` (TransitionEp2), `/ep2/scene/[id]` (id 1/2/3 NarrationScreen + id 4 InteractionScreen), `/ep2/ending` (EndingCard). PREV/NEXT 매핑 완성.
+- **Ep 2 엔딩 액션**: `[Ep 3는 확장 비전 슬라이드로 대체]` → `showToast` *"이 자리에서 외부 발표 슬라이드로 전환됩니다."* (실제 발표 시 외부 슬라이드 수동 전환), `[타이틀로]` → `navigate("/")`
+- **`globals.css`**: `.vn-transition-ep2` (검은 배경 + 옅은 세피아 italic 텍스트, 22px line-height 2)
+- **시연 대본 (`demo/scenario_script.md`)**: 사전 준비(alembic 등) + 발표 흐름 (~10분) + 화면별 시연 시나리오 + 시연 포인트 매트릭스 + 메타 인사이트 + Q&A 예상 답변 결
+
+#### 산출물 — Ep 2 화면 매트릭스
+| 라우트 | 컴포넌트 | screenId | 단락/모드 | 일러스트 (임시) |
+|---|---|---|---|---|
+| `/ep2/transition` | TransitionEp2 | — | 검은 배경 + italic | (없음) |
+| `/ep2/scene/1` | NarrationScreen | `ep2_screen1_market` | 5단락 | screen_07_market_distant |
+| `/ep2/scene/2` | NarrationScreen | `ep2_screen2_uebermensch` | 8단락 | screen_05_meeting |
+| `/ep2/scene/3` | NarrationScreen | `ep2_screen3_clown_fall` | 18단락 | screen_04_prologue_road |
+| `/ep2/scene/4` | InteractionScreen | `ep2_screen4_reunion` | auto + farewell | screen_05_meeting |
+| `/ep2/ending` | EndingCard | `ep2_ending` | 2줄 + 메뉴 | screen_08_ending |
+
+#### 검증
+- [x] `npx tsc --noEmit` 무에러
+- [x] `npm run lint` clean
+- [x] 6개 Ep 2 라우트 모두 200
+- [x] SSR HTML 검증
+  - `/ep2/transition`: `vn-transition-ep2` + "밤이 깊었다" 마운트
+  - `/ep2/scene/1`: `vn-narration` + "차라투스트라가 가까운"
+  - `/ep2/scene/2`: `vn-narration` + "이번에는 더 깊이"
+  - `/ep2/scene/3`: `vn-narration` + "군중에게서 눈을"
+  - `/ep2/scene/4`: `vn-interaction` + "작별을 고한다"
+  - `/ep2/ending`: `vn-ending` + "EPISODE 2" + "시 장" + "Ep 3는" + "타이틀로"
+- [ ] 라이브 흐름 (Ep 1 #8 → transition → Ep 2 #1 자동 진행, 작별 흐름)은 브라우저에서 수동 검증 필요
+
+#### 알려진 한계
+- **Ep 2 일러스트 5장 별도 제작 필요**: 현재 Ep 1 일러스트 임시 매핑 (#1→ep1#7, #2→ep1#5, #3→ep1#4, #4→ep1#5, 엔딩→ep1#8). 학습자 시각 일관성은 깨지지만 시연 동작은 보장. 사용자가 ep2_screen_*.webp 5장 추가 후 데이터 파일 5개의 `illustration` 경로만 교체.
+- **컨텍스트 보존(Ep 1 → Ep 2 #4 주입)은 Phase 9 vLLM 통합으로 미룸**: TransitionEp2가 백그라운드 요약 sLLM 호출 안 함. Ep 2 #4의 `useInteraction`은 빈 history로 시작. 시각 시퀀스만 동작. 발표 시 *"개인화 RAG와 카운드오버 요약은 Phase 9 RunPod vLLM 환경에서 동작"* 명시 필요.
+- **Ep 2 엔딩 [Ep 3는 확장 비전 슬라이드로 대체] 액션은 토스트만**: 실제 발표 시 시연자가 토스트 본 후 외부 슬라이드로 수동 전환. 자동 라우팅 X (외부 슬라이드 시스템과 분리).
+- **Ep 2 #4 백엔드 Mock 응답이 Ep 1 #5/#6/#7과 동일 풀**: `mock_data.py`의 `EP2_PERSONA_*` 별도 풀 미구현. Phase 9에서 vLLM 실제 응답으로 자연 차이.
+- **#3 광대 사건 18단락은 학습자 시연 시 클릭 부담 큼**: 작품 핵심이라 줄이기 어려움. 발표 흐름에서 ~90초 할애.
+
+#### 다음 Phase
+- **Phase 9: vLLM 실제 연결 + RAG + 요약 sLLM** (별도 Phase, RunPod 환경 의존)
+- 핵심 작업: `LLM_MODE=vllm` 토글 검증, `VLLMPersonaClient`/`VLLMExplainClient`/`VLLMSummaryClient` 실 호출, BGE-M3 + HyDE RAG 인덱스 구축, Ep 1 → Ep 2 카운드오버 요약 sLLM 결과를 Ep 2 #4 시스템 프롬프트에 주입
+- 사용자 확인 필요: RunPod 환경 셋업 + vLLM 0.19 + Gemma 4 31B 가중치 / Alembic 002 적용 / RAG 인덱스 빌드 시점
 
 ### 2026-05-01 — Phase 7 완료 (해설 패널 + 모달 + 토스트 + 세이브)
 
@@ -363,7 +409,7 @@
 | 5 | 책 삽화 레이아웃 + 페이드 + 일러스트 통합 | ✅ 완료 (2026-05-01) |
 | 6 | 인터랙션 컴포넌트 | ✅ 완료 (2026-05-01) |
 | 7 | 해설 패널 + 모달 + 토스트 + 세이브 | ✅ 완료 (2026-05-01) |
-| 8 | Ep 2 통합 + transition + 시연 대본 | ⏳ 대기 |
+| 8 | Ep 2 통합 + transition + 시연 대본 | ✅ 완료 (2026-05-01) |
 | 9 | (별도) vLLM 실제 연결 + RAG + 요약 sLLM | 🔵 Phase 8 후 |
 
 ---
@@ -389,6 +435,14 @@
 - `POST /save`는 내부에서 `SummaryClient`를 동기 consume하여 summary 생성 후 upsert. 별도 summary 인자 받지 않음.
 - DB는 PostgreSQL 유지 (기존 셋업 그대로). VN_AGENTS.md §1의 SQLite 표기는 README 정정 시점에 처리.
 - 신규 단위/통합 테스트 미작성 (VN_AGENTS.md §3.5 *"단위 테스트 작성 시간 낭비"*). curl + smoke import로 종료 조건 충족.
+
+### Phase 8
+- **Ep 2 #3 광대 사건은 18단락 분리 (원본 16 → 18)**: *narration 안 발화 인용*이 같은 단락에 섞이면 시각 구분 약함. 죽어가는 자 발화 두 군데(#10, #12)를 도입 문장(narration)과 발화(quote)로 분리. 단락 수 늘었지만 학습자가 천천히 읽기 좋고 시각 일관 유지.
+- **TransitionEp2는 시각만 (요약 sLLM 호출 X)**: VN_UI_POLICY §6.5의 *"백그라운드 요약 sLLM"*은 Phase 9 vLLM 환경에서 통합. Phase 8 mock 단계에선 *시각 시퀀스의 작품 결*만 검증. saveSlice/별도 슬라이스에 요약 결과 저장 패턴은 Phase 9 작업.
+- **Ep 2 일러스트 임시 ep1 매핑**: 일러스트 자산이 없어 *시연 자체*가 막히는 것보다는 *비슷한 그림 재사용*이 진행 우선. 시연 시 *임시 일러스트* 명시.
+- **Ep 2 엔딩 [Ep 3 확장 비전] 액션은 토스트**: 외부 슬라이드 자동 전환은 비주얼 노벨 앱 책임 밖. 발표자가 토스트 보고 수동으로 슬라이드 전환.
+- **Ep 2 강조 마커 적용 위치**: 사상 등장(#2 위버멘쉬·마지막 인간), 차라 마음 변화(#2 마지막 단락), 밧줄 잠언 첫 두 줄(#3 #2단락 일부), 차라 약속(#3 #15 "묻으리라"), 마지막 행동(#3 #18 "등에 졌다"). 학습자 시선이 *작품 흐름의 결정적 지점*에 머물도록 의도 배치.
+- **시연 대본은 markdown으로 단일 파일**: 별도 슬라이드 deck X. 발표 시 `demo/scenario_script.md` 보면서 라이브 진행.
 
 ### Phase 7
 - **정적 풀이 6개 모두 작성 (Ep 1 + Ep 2)**: 사용자가 한 번에 6개 다 줘서 Ep 2도 미리 작성. Phase 8 진입 시 데이터 준비 완료 — 본문 텍스트만 받으면 Ep 2 마운트 가능.
@@ -549,3 +603,4 @@ curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000/ep2/ending
 - 2026-05-01: Phase 5 완료 라인 추가 (16:10 책 삽화 레이아웃 + 사용자 제작 일러스트 8장 WebP 통합 + #4→#5 800ms slowFade wiring).
 - 2026-05-01: Phase 6 완료 라인 추가 (인터랙션 컴포넌트 4종 + useInteraction 훅 + Mock SSE 통합 + farewell 흐름).
 - 2026-05-01: Phase 7 완료 라인 추가 (해설 패널 우측 슬라이드 + Modal 공용 + useSave/useExplain 훅 + 정적 풀이 6개 + [저장]/[불러오기] 모달 흐름).
+- 2026-05-01: Phase 8 완료 라인 추가 (Ep 2 데이터 5개 + TransitionEp2 + Ep 2 라우트 마운트 + 시연 대본).
