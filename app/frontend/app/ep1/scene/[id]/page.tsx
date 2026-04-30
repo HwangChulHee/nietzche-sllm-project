@@ -1,16 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
+import { NarrationScreen } from "@/components/vn/NarrationScreen";
+import { ep1Screen2Summit } from "@/data/scenes/ep1_screen2_summit";
+import { ep1Screen3Forest } from "@/data/scenes/ep1_screen3_forest";
+import { ep1Screen4Road } from "@/data/scenes/ep1_screen4_road";
+import type { NarrationScene } from "@/data/scenes/types";
 import { useAppDispatch } from "@/lib/hooks/useAppDispatch";
 import { enterScene, type Mode } from "@/lib/store/episodeSlice";
 
+const NARRATION_SCENES: Record<string, NarrationScene> = {
+  "2": ep1Screen2Summit,
+  "3": ep1Screen3Forest,
+  "4": ep1Screen4Road,
+};
+
 const SCENE_LABELS: Record<string, { name: string; mode: Mode; phase: string }> = {
-  "2": { name: "산 정상", mode: "narration", phase: "Phase 4" },
-  "3": { name: "숲의 성자", mode: "narration", phase: "Phase 4" },
-  "4": { name: "길로 나섬", mode: "narration", phase: "Phase 4" },
   "5": { name: "만남", mode: "interaction", phase: "Phase 6" },
   "6": { name: "동행", mode: "interaction", phase: "Phase 6" },
   "7": { name: "시장 원경", mode: "interaction", phase: "Phase 6" },
@@ -29,15 +37,30 @@ export default function Ep1ScenePage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
   const dispatch = useAppDispatch();
-  const meta = SCENE_LABELS[id] ?? { name: "(unknown)", mode: "narration" as Mode, phase: "?" };
+  const router = useRouter();
+
+  const scene = NARRATION_SCENES[id];
+  const placeholderMeta = SCENE_LABELS[id];
+  const mode: Mode = scene ? "narration" : (placeholderMeta?.mode ?? "narration");
 
   useEffect(() => {
     const idx = Number.parseInt(id, 10);
     if (!Number.isNaN(idx)) {
-      dispatch(enterScene({ episode: "ep1", sceneIndex: idx, mode: meta.mode }));
+      dispatch(enterScene({ episode: "ep1", sceneIndex: idx, mode }));
     }
-  }, [dispatch, id, meta.mode]);
+  }, [dispatch, id, mode]);
 
+  if (scene) {
+    return (
+      <NarrationScreen
+        paragraphs={scene.paragraphs}
+        enableHaeseol={scene.enableHaeseol}
+        onComplete={() => router.push(NEXT[id])}
+      />
+    );
+  }
+
+  const meta = placeholderMeta ?? { name: "(unknown)", mode: "narration" as Mode, phase: "?" };
   return (
     <div className="vn-placeholder">
       <h1 className="vn-placeholder__title">Ep 1 · #{id}</h1>

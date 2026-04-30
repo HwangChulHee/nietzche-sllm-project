@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { ToastHost } from "@/components/vn/ToastHost";
 import { Providers } from "./providers";
 import { VnFrame } from "./vn-frame";
 import "./globals.css";
@@ -17,6 +18,7 @@ export default function RootLayout({
       <body>
         <Providers>
           <VnFrame>{children}</VnFrame>
+          <ToastHost />
         </Providers>
       </body>
     </html>

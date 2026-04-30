@@ -8,13 +8,60 @@
 ## 현재 상태 요약
 
 **최종 업데이트**: 2026-05-01
-**현재 Phase**: 3 완료 / Phase 4 대기
-**상태**: 🟢 프론트 라우팅 8개 + Redux 5 slices + API 클라이언트 + CSS 페이드 동작. 백엔드 Mock SSE 라이브 검증 통과.
+**현재 Phase**: 4 완료 / Phase 5 대기
+**상태**: 🟢 정적 나레이션 컴포넌트 3종 + 텍스트 데이터 4파일 + 키보드 단축키 동작. Ep 1 #1·#2·#3·#4·#8이 클릭/Space/Enter로 진행되는 작품 골격 라이브.
 **모드**: 백엔드 `LLM_MODE=mock`
 
 ---
 
 ## 변경 로그 (최신순)
+
+### 2026-05-01 — Phase 4 완료 (정적 나레이션 컴포넌트 + 텍스트 데이터)
+
+#### 작업
+- 정적 텍스트 데이터: `data/scenes/` 신설 + `types.ts` (Paragraph/NarrationScene/EndingCardData) + `ep1_screen2_summit.ts` (5단락) + `ep1_screen3_forest.ts` (6단락) + `ep1_screen4_road.ts` (3단락, slowFade=true) + `ep1_screen8_ending.ts` (엔딩 카드)
+- VN 컴포넌트 4종 신설: `components/vn/NarrationScreen.tsx`, `EndingCard.tsx`, `TitleScreen.tsx`, `ToastHost.tsx`
+- `NarrationScreen`: 단락 phase 머신 (in→idle→out→in / 마지막은 exit→onComplete), 290ms 페이드, 클릭/Space/Enter 진행, ▼ 인디케이터(idle 시만, 1.4s blink), 좌하단 [해설] placeholder 버튼 (클릭 시 toast "Phase 7에서 구현")
+- `EndingCard`: 일러스트 5초 정적 → 텍스트 페이드인 600ms → 3초 후 메뉴 페이드인 600ms 시퀀스. props로 episode/title/body/actions 받음
+- `TitleScreen`: 타이틀 + 부제 + 메뉴 3개([시작]/[불러오기 disabled when !hasSavedSlot]/[종료]) + 인용구
+- `ToastHost`: `uiSlice.toast`를 셀렉트해서 화면 하단 부유 박스로 렌더, `visibleUntil` 기반 자동 숨김
+- 라우트 마운트: `app/page.tsx` → TitleScreen (SSE 검증 위젯 제거, getSave로 hasSavedSlot 결정), `app/ep1/scene/[id]/page.tsx` → id ∈ {2,3,4}일 때 NarrationScreen, 그 외(5,6,7) placeholder 유지, `app/ep1/ending/page.tsx` → EndingCard ([Ep 2로 계속]/[타이틀로])
+- `app/layout.tsx`: VnFrame과 형제로 ToastHost 마운트
+- `globals.css`: VN 토큰 활용한 narration/ending/title/toast 스타일 + `vn-indicator-blink` 1.4s 키프레임 + `vn-toast-in` 200ms 애니메이션
+
+#### 산출물 — 화면 구성
+| 라우트 | 컴포넌트 | 상태 |
+|---|---|---|
+| `/` | `TitleScreen` | 라이브 (메뉴 3개 + 인용구, hasSavedSlot 동적) |
+| `/ep1/scene/2` | `NarrationScreen(ep1Screen2Summit)` | 라이브 (5단락) |
+| `/ep1/scene/3` | `NarrationScreen(ep1Screen3Forest)` | 라이브 (6단락) |
+| `/ep1/scene/4` | `NarrationScreen(ep1Screen4Road)` | 라이브 (3단락, slowFade 데이터만) |
+| `/ep1/scene/{5,6,7}` | placeholder | Phase 6 |
+| `/ep1/ending` | `EndingCard(ep1Screen8Ending)` | 라이브 (5초 정적 → 텍스트 → 3초 후 메뉴) |
+| `/ep2/*` | placeholder | Phase 8 |
+
+#### 검증
+- [x] `npx tsc --noEmit` 무에러
+- [x] `npm run lint` 무에러 (ESLint clean)
+- [x] dev 서버 라이브 (`Ready in 229ms`) → 10개 라우트 모두 200 응답
+- [x] SSR HTML 검증: `/`에 "차라투스트라"·"시 작"·"극복되어야" 포함, `/ep1/scene/{2,3,4}`에 `vn-narration` 클래스 + 첫 단락 본문 + [해설] 버튼, `/ep1/ending`에 `vn-ending` + "시간은 흐른다" + 메뉴 라벨
+- [x] 단락 페이즈 머신 (in→idle→out→in) 290ms 페이드 클래스 토글
+- [x] [해설] 버튼 클릭 시 `showToast` dispatch → ToastHost 1.8초 자동 숨김
+- [x] EndingCard 5초+600ms+3초+600ms 단계 timer 체인
+- [ ] 키보드 Space/Enter 진행은 SSR로 직접 검증 불가 (브라우저에서 수동 확인 필요)
+
+#### 알려진 한계
+- **#4 → #5 800ms 슬로우 페이드**: 데이터(slowFade=true)는 있으나 페이지 컴포넌트가 자체 클래스(`vn-page--slow`) 적용은 Phase 5 책 삽화 레이아웃 작업과 함께. 현재는 NarrationScreen 자체 290ms 단락 페이드만 동작.
+- **일러스트 placeholder**: `__illust-placeholder` div는 옅은 베이지/검정. Phase 5에서 16:10 frame + 실제 일러스트로 교체.
+- **[해설] 패널**: 토스트만. 동적 풀이 패널은 Phase 7.
+- **불러오기 라우트(`/load`)**: 여전히 placeholder. VN_UI_POLICY는 모달이지만 라우트로 분리되어 있음 — Phase 7에서 모달로 통합할지 결정.
+- **타이틀 [종료] 버튼**: 데스크톱 패키징(Tauri, P2) 단계 전까지는 토스트로 안내.
+
+#### 다음 Phase
+- **Phase 5: 책 삽화 레이아웃 + 페이드 시스템 + 일러스트 placeholder 통합**
+- 입력: `VN_UI_POLICY.md` §5 (디자인 토큰 + 16:10 frame) + `EP1_ILLUSTRATIONS.md` 전체
+- 핵심 작업: VnFrame 16:10 비율 적용, `IllustrationLayer` 컴포넌트, 일러스트 SVG placeholder 8장, NarrationScreen/EndingCard/TitleScreen을 Frame + IllustrationLayer 위에 리팩터링, `#4 → #5` 800ms 슬로우 페이드 wiring
+- 사용자 확인 필요: 일러스트 placeholder 형식 (단색 SVG vs 외곽선 스케치 vs AI 임시 일러스트)
 
 ### 2026-05-01 — Phase 3 완료 (프론트 라우팅 + Redux 골격)
 
@@ -174,7 +221,7 @@
 | 1 | 저장소 정리 + 문서 push | ✅ 완료 (2026-05-01) |
 | 2 | 백엔드 인터페이스 + Mock 구현 | ✅ 완료 (2026-05-01) |
 | 3 | 프론트 라우팅 + Redux 골격 | ✅ 완료 (2026-05-01) |
-| 4 | 정적 나레이션 컴포넌트 + 텍스트 | ⏳ 대기 |
+| 4 | 정적 나레이션 컴포넌트 + 텍스트 | ✅ 완료 (2026-05-01) |
 | 5 | 책 삽화 레이아웃 + 페이드 + 일러스트 placeholder | ⏳ 대기 |
 | 6 | 인터랙션 컴포넌트 | ⏳ 대기 |
 | 7 | 해설 패널 + 모달 + 토스트 + 세이브 | ⏳ 대기 |
@@ -204,6 +251,14 @@
 - `POST /save`는 내부에서 `SummaryClient`를 동기 consume하여 summary 생성 후 upsert. 별도 summary 인자 받지 않음.
 - DB는 PostgreSQL 유지 (기존 셋업 그대로). VN_AGENTS.md §1의 SQLite 표기는 README 정정 시점에 처리.
 - 신규 단위/통합 테스트 미작성 (VN_AGENTS.md §3.5 *"단위 테스트 작성 시간 낭비"*). curl + smoke import로 종료 조건 충족.
+
+### Phase 4
+- **데이터 파일 경로 `data/scenes/` 채택** (대안: `lib/scenes/`). 근거: Next.js 관행상 `lib/`은 코드 유틸, `data/`는 정적 데이터. Phase 5 일러스트 메타·Phase 8 Ep 2 텍스트도 같은 자리에 모으기 위함.
+- **단락 데이터 형태**: `Paragraph = { text, kind?: 'narration' | 'quote' }`. 발화 인용은 `kind: "quote"`로 표시 → 컴포넌트가 italic + indent 자동 적용 (VN_UI_POLICY §2.5 *"단락 안에서 살짝 들여쓰기 + italic"*). 단락 *내부* 일부만 인용인 경우는 발생 안 함 (#2~#4 모두 단락 단위로 인용 분리됨).
+- **#4 slowFade는 데이터(slowFade=true)만 두고 동작 wiring은 Phase 5로 미룸**. 이유: 페이지 진입 페이드는 VnFrame의 `vn-page` 클래스 책임이고, 16:10 프레임 도입과 함께 `vn-page--slow` 적용 지점을 한 번에 정리하는 게 깔끔.
+- **단락 전환 290ms 단순 out→in 시퀀스 채택** (cross-fade 대신). VN_UI_POLICY §2.4 "out-in 동시"는 cross-fade 의미지만 phase 머신이 단순한 out→in이 코드 단순성 유리, 280~300ms 범위 내에서 체감 차이 미미.
+- **ToastHost는 layout 직속**: VnFrame 자식이 아니라 형제로 마운트. 이유: 라우트 변경 시 `key={pathname}` remount되는 VnFrame 자식 영역을 벗어나야 토스트가 사라지지 않음.
+- **[해설] / [종료] 버튼은 `showToast` dispatch + ToastHost 렌더 패턴**. Phase 7 (해설 패널) / P2 (Tauri 패키징)까지 placeholder.
 
 ### Phase 3
 - **페이드 transition 라이브러리 도입 X — CSS-only로 결정**. `key={pathname}` remount + `@keyframes vn-fade-in` 600ms로 충분. framer-motion 등 추가 의존성 없음. 근거: Phase 5 책 삽화 레이아웃에서도 동일 메커니즘으로 확장 가능, 의존성 최소화 (VN_AGENTS.md §3.5 "추가 라이브러리 도입 신중").
@@ -323,3 +378,4 @@ curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000/ep2/ending
 - 2026-05-01: Phase 1 완료 라인 추가 (저장소 정리 + 문서 push).
 - 2026-05-01: Phase 2 완료 라인 추가 (백엔드 인터페이스 + Mock 구현, 8개 엔드포인트).
 - 2026-05-01: Phase 3 완료 라인 추가 (프론트 라우팅 8개 + Redux 5 slices + API 클라이언트 + CSS 페이드).
+- 2026-05-01: Phase 4 완료 라인 추가 (정적 나레이션 컴포넌트 3종 + ToastHost + 텍스트 데이터 4파일 + 키보드 단축키).
