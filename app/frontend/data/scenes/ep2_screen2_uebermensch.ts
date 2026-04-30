@@ -3,8 +3,8 @@ import type { NarrationScene } from "./types";
 export const ep2Screen2Uebermensch: NarrationScene = {
   screenId: "ep2_screen2_uebermensch",
   enableHaeseol: true,
-  illustration: "/illustrations/screen_05_meeting.webp",
-  alt: "위버멘쉬와 마지막 인간을 선포하는 차라투스트라 (임시: Ep 1 #5 일러스트 재사용)",
+  illustration: "/illustrations/ep2_screen_02_uebermensch.webp",
+  alt: "군중 앞에서 위버멘쉬와 마지막 인간을 선포하는 차라투스트라",
   paragraphs: [
     {
       kind: "narration",

@@ -8,6 +8,6 @@ export const ep2Ending: EndingCardData = {
     "차라투스트라는 시장을 떠났다.",
     "그의 사상은 아직 들리지 않는 자들에게 던져졌다.",
   ],
-  illustration: "/illustrations/screen_08_ending.webp",
-  alt: "황혼의 빈 길과 시신을 짊어지고 떠나는 자 (임시: Ep 1 #8 일러스트 재사용)",
+  illustration: "/illustrations/ep2_ending_road.webp",
+  alt: "시장을 떠나는 차라투스트라의 황혼 길",
 };

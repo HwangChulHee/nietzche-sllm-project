@@ -3,8 +3,8 @@ import type { NarrationScene } from "./types";
 export const ep2Screen1MarketArrival: NarrationScene = {
   screenId: "ep2_screen1_market",
   enableHaeseol: true,
-  illustration: "/illustrations/screen_07_market_distant.webp",
-  alt: "시장 광장에 모여든 군중과 곧 줄타기 광대를 기다리는 분위기 (임시: Ep 1 #7 일러스트 재사용)",
+  illustration: "/illustrations/ep2_screen_01_market_arrival.webp",
+  alt: "시장 광장에 도착한 차라투스트라와 줄타기 광대를 기다리는 군중",
   paragraphs: [
     {
       kind: "narration",

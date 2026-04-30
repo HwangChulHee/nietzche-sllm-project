@@ -3,8 +3,8 @@ import type { NarrationScene } from "./types";
 export const ep2Screen3ClownFall: NarrationScene = {
   screenId: "ep2_screen3_clown_fall",
   enableHaeseol: true,
-  illustration: "/illustrations/screen_04_prologue_road.webp",
-  alt: "광대 사건과 시신을 거두는 차라투스트라 (임시: Ep 1 #4 일러스트 재사용)",
+  illustration: "/illustrations/ep2_screen_03_clown_fall.webp",
+  alt: "줄타기 광대의 추락과 시신 곁에 선 차라투스트라",
   paragraphs: [
     {
       kind: "narration",
