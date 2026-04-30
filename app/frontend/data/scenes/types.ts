@@ -8,6 +8,8 @@ export type NarrationScene = {
   paragraphs: Paragraph[];
   enableHaeseol: boolean;
   slowFade?: boolean;
+  illustration: string;
+  alt: string;
 };
 
 export type EndingCardData = {
@@ -15,4 +17,6 @@ export type EndingCardData = {
   episode: string;
   title: string;
   body: string[];
+  illustration: string;
+  alt: string;
 };

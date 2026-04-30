@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Frame } from "./Frame";
+import { IllustrationLayer } from "./IllustrationLayer";
 import type { Paragraph } from "@/data/scenes/types";
 import { showToast } from "@/lib/store/uiSlice";
 import { useAppDispatch } from "@/lib/hooks/useAppDispatch";
@@ -10,12 +12,20 @@ const FADE_MS = 290;
 type Props = {
   paragraphs: Paragraph[];
   enableHaeseol: boolean;
+  illustration: string;
+  alt: string;
   onComplete: () => void;
 };
 
 type Phase = "in" | "idle" | "out" | "exit";
 
-export function NarrationScreen({ paragraphs, enableHaeseol, onComplete }: Props) {
+export function NarrationScreen({
+  paragraphs,
+  enableHaeseol,
+  illustration,
+  alt,
+  onComplete,
+}: Props) {
   const dispatch = useAppDispatch();
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>("in");
@@ -65,46 +75,48 @@ export function NarrationScreen({ paragraphs, enableHaeseol, onComplete }: Props
 
   const para = paragraphs[index];
   const showIndicator = phase === "idle";
-  const textOpacity =
-    phase === "in" || phase === "out" || phase === "exit" ? "vn-narration__text--fading" : "";
-  const inFlight = phase !== "idle";
+  const fading = phase !== "idle";
+  const inFlight = fading;
 
   return (
-    <div className="vn-narration" onClick={advance} role="presentation">
-      <div className="vn-narration__illust" aria-hidden="true">
-        <div className="vn-narration__illust-placeholder">
-          {/* Phase 5에서 일러스트로 교체 */}
+    <Frame>
+      <div className="vn-narration" onClick={advance} role="presentation">
+        <IllustrationLayer
+          imagePath={illustration}
+          alt={alt}
+          mode="narration"
+          priority
+        />
+
+        <div className="vn-narration__textbox">
+          <p
+            className={`vn-narration__text ${
+              para.kind === "quote" ? "vn-narration__text--quote" : ""
+            } ${fading ? "vn-narration__text--fading" : ""}`}
+          >
+            {para.text}
+          </p>
+          <span
+            className={`vn-narration__indicator ${
+              showIndicator ? "" : "vn-narration__indicator--hidden"
+            }`}
+            aria-hidden="true"
+          >
+            ▼
+          </span>
         </div>
-      </div>
 
-      <div className="vn-narration__textbox">
-        <p
-          className={`vn-narration__text ${
-            para.kind === "quote" ? "vn-narration__text--quote" : ""
-          } ${textOpacity}`}
-        >
-          {para.text}
-        </p>
-        <span
-          className={`vn-narration__indicator ${
-            showIndicator ? "" : "vn-narration__indicator--hidden"
-          }`}
-          aria-hidden="true"
-        >
-          ▼
-        </span>
+        {enableHaeseol && (
+          <button
+            type="button"
+            className="vn-narration__haeseol"
+            onClick={onHaeseolClick}
+            disabled={inFlight}
+          >
+            [해설]
+          </button>
+        )}
       </div>
-
-      {enableHaeseol && (
-        <button
-          type="button"
-          className="vn-narration__haeseol"
-          onClick={onHaeseolClick}
-          disabled={inFlight}
-        >
-          [해설]
-        </button>
-      )}
-    </div>
+    </Frame>
   );
 }

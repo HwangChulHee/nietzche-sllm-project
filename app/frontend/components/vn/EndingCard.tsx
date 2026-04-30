@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Frame } from "./Frame";
+import { IllustrationLayer } from "./IllustrationLayer";
 
 export type EndingAction = {
   label: string;
@@ -11,6 +13,8 @@ type Props = {
   episode: string;
   title: string;
   body: string[];
+  illustration: string;
+  alt: string;
   actions: EndingAction[];
 };
 
@@ -21,7 +25,7 @@ const TEXT_FADE_MS = 600;
 const MENU_DELAY_MS = 3000;
 const MENU_FADE_MS = 600;
 
-export function EndingCard({ episode, title, body, actions }: Props) {
+export function EndingCard({ episode, title, body, illustration, alt, actions }: Props) {
   const [stage, setStage] = useState<Stage>("illust_only");
 
   useEffect(() => {
@@ -51,41 +55,47 @@ export function EndingCard({ episode, title, body, actions }: Props) {
   const menuVisible = stage === "menu_fading_in" || stage === "menu_idle";
 
   return (
-    <div className="vn-ending">
-      <div className="vn-ending__illust" aria-hidden="true">
-        <div className="vn-ending__illust-placeholder" />
-      </div>
+    <Frame>
+      <div className="vn-ending">
+        <IllustrationLayer
+          imagePath={illustration}
+          alt={alt}
+          mode="fullscreen"
+          priority
+        />
+        <div className="vn-ending__veil" aria-hidden="true" />
 
-      <div
-        className={`vn-ending__text ${textVisible ? "vn-ending__text--visible" : ""}`}
-        aria-hidden={!textVisible}
-      >
-        <div className="vn-ending__episode">{episode}</div>
-        <h1 className="vn-ending__title">{title}</h1>
-        <div className="vn-ending__divider">─────────────</div>
-        <div className="vn-ending__body">
-          {body.map((line, i) => (
-            <p key={i}>{line}</p>
+        <div
+          className={`vn-ending__text ${textVisible ? "vn-ending__text--visible" : ""}`}
+          aria-hidden={!textVisible}
+        >
+          <div className="vn-ending__episode">{episode}</div>
+          <h1 className="vn-ending__title">{title}</h1>
+          <div className="vn-ending__divider">─────────────</div>
+          <div className="vn-ending__body">
+            {body.map((line, i) => (
+              <p key={i}>{line}</p>
+            ))}
+          </div>
+        </div>
+
+        <div
+          className={`vn-ending__menu ${menuVisible ? "vn-ending__menu--visible" : ""}`}
+          aria-hidden={!menuVisible}
+        >
+          {actions.map((a) => (
+            <button
+              key={a.label}
+              type="button"
+              className="vn-ending__action"
+              onClick={a.onClick}
+              disabled={!menuVisible}
+            >
+              {a.label}
+            </button>
           ))}
         </div>
       </div>
-
-      <div
-        className={`vn-ending__menu ${menuVisible ? "vn-ending__menu--visible" : ""}`}
-        aria-hidden={!menuVisible}
-      >
-        {actions.map((a) => (
-          <button
-            key={a.label}
-            type="button"
-            className="vn-ending__action"
-            onClick={a.onClick}
-            disabled={!menuVisible}
-          >
-            {a.label}
-          </button>
-        ))}
-      </div>
-    </div>
+    </Frame>
   );
 }

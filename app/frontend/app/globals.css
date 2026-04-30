@@ -1,20 +1,13 @@
 @import "tailwindcss";
 
 :root {
-  /* 옛 챗봇 토큰 (Phase 5에서 정리) */
-  --bg-primary: #f4f1ea;
-  --bg-secondary: #e8e3d6;
-  --text-primary: #2c2416;
-  --text-secondary: #6b5d4f;
-  --accent: #8b2e1f;
-  --border-color: #c4baa9;
-
-  /* VN 토큰 (VN_UI_POLICY §5) — Phase 5에서 본격 적용 */
+  /* VN 토큰 (VN_UI_POLICY §5) — 단일 진실 소스 */
   --vn-bg: #f5ecd9;
   --vn-bg-darker: #ebe0c8;
   --vn-ink: #2a1f14;
   --vn-ink-light: #6b5f4f;
   --vn-ink-muted: #b8ad9b;
+  --vn-letterbox: #0d0a07;
   --vn-font-serif: Georgia, 'Times New Roman', serif;
 }
 
@@ -28,7 +21,7 @@ body {
   font-family: var(--vn-font-serif);
   font-size: 16px;
   line-height: 1.7;
-  background-color: var(--vn-bg);
+  background-color: var(--vn-letterbox);
   color: var(--vn-ink);
   -webkit-font-smoothing: antialiased;
 }
@@ -38,21 +31,25 @@ body {
   opacity: 0.7;
 }
 
-/* ─── VN Frame & Fade ────────────────────────────── */
+/* ─── VN Frame (letterbox + 16:10 page) ──────────── */
 
 .vn-frame {
   width: 100vw;
   height: 100vh;
-  background: var(--vn-bg);
+  background: var(--vn-letterbox);
   overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: grid;
+  place-items: center;
 }
 
+/* 16:10 캔버스 — viewport 비율에 따라 width/height 자동.
+   세로가 짧으면 height 100vh, 가로가 짧으면 width 100vw 가 binding. */
 .vn-page {
-  width: 100%;
-  height: 100%;
+  width: min(100vw, calc(100vh * 16 / 10));
+  height: min(100vh, calc(100vw * 10 / 16));
+  background: var(--vn-bg);
+  position: relative;
+  overflow: hidden;
   animation: vn-fade-in 600ms ease forwards;
 }
 
@@ -66,7 +63,41 @@ body {
   to   { opacity: 1; }
 }
 
-/* Phase 3 placeholder 전용 (Phase 4부터 컴포넌트가 대체) */
+/* Frame — 컴포넌트가 사용하는 단순 wrapper. position 컨텍스트는
+   각 화면 컴포넌트(.vn-narration / .vn-ending / .vn-title)가 보유. */
+.vn-book {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+/* ─── Illustration Layer ─────────────────────────── */
+
+.vn-illust {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.vn-illust--narration {
+  top: 0;
+  height: 70%;
+}
+
+.vn-illust--interaction {
+  top: 0;
+  height: 50%;
+}
+
+.vn-illust--fullscreen {
+  top: 0;
+  bottom: 0;
+}
+
+/* ─── Placeholder (Phase 7+에서 본격 컴포넌트 도입할 라우트용) ── */
+
 .vn-placeholder {
   width: 100%;
   height: 100%;
@@ -131,26 +162,14 @@ body {
   font-family: var(--vn-font-serif);
 }
 
-.vn-narration__illust {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-}
-
-.vn-narration__illust-placeholder {
-  width: 100%;
-  height: 100%;
-  background: var(--vn-bg-darker);
-}
-
 .vn-narration__textbox {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
-  height: 33%;
-  padding: 48px 80px 56px;
-  background: rgba(245, 236, 217, 0.92);
+  height: 30%;
+  padding: 40px 80px 48px;
+  background: var(--vn-bg);
   border-top: 1px solid var(--vn-ink-muted);
   display: flex;
   align-items: center;
@@ -205,7 +224,7 @@ body {
   font-size: 13px;
   letter-spacing: 0.06em;
   color: var(--vn-ink);
-  background: transparent;
+  background: var(--vn-bg);
   border: 1px solid var(--vn-ink-muted);
   padding: 6px 14px;
   cursor: pointer;
@@ -231,17 +250,15 @@ body {
   font-family: var(--vn-font-serif);
 }
 
-.vn-ending__illust {
+/* 풀스크린 일러스트 위 텍스트 가독성 — 옅은 세피아 vignette */
+.vn-ending__veil {
   position: absolute;
   inset: 0;
   z-index: 0;
-}
-
-.vn-ending__illust-placeholder {
-  width: 100%;
-  height: 100%;
-  background: var(--vn-ink);
-  opacity: 0.08;
+  background:
+    radial-gradient(ellipse at center, rgba(245, 236, 217, 0.0) 35%, rgba(245, 236, 217, 0.55) 90%),
+    linear-gradient(rgba(245, 236, 217, 0.15), rgba(245, 236, 217, 0.15));
+  pointer-events: none;
 }
 
 .vn-ending__text {
@@ -254,6 +271,7 @@ body {
   z-index: 1;
   opacity: 0;
   transition: opacity 600ms ease;
+  text-shadow: 0 0 12px rgba(245, 236, 217, 0.7);
 }
 
 .vn-ending__text--visible {
@@ -307,7 +325,7 @@ body {
   font-size: 14px;
   letter-spacing: 0.08em;
   color: var(--vn-ink);
-  background: transparent;
+  background: rgba(245, 236, 217, 0.85);
   border: 1px solid var(--vn-ink-muted);
   padding: 10px 22px;
   cursor: pointer;
@@ -333,16 +351,14 @@ body {
   font-family: var(--vn-font-serif);
 }
 
-.vn-title__illust {
+.vn-title__veil {
   position: absolute;
   inset: 0;
   z-index: 0;
-}
-
-.vn-title__illust-placeholder {
-  width: 100%;
-  height: 100%;
-  background: var(--vn-bg-darker);
+  background:
+    radial-gradient(ellipse at center, rgba(245, 236, 217, 0.0) 25%, rgba(245, 236, 217, 0.5) 80%),
+    linear-gradient(rgba(245, 236, 217, 0.2), rgba(245, 236, 217, 0.2));
+  pointer-events: none;
 }
 
 .vn-title__content {
@@ -364,6 +380,7 @@ body {
   letter-spacing: 0.32em;
   font-weight: 400;
   margin-bottom: 16px;
+  text-shadow: 0 0 14px rgba(245, 236, 217, 0.7);
 }
 
 .vn-title__sub {
@@ -385,7 +402,7 @@ body {
   font-size: 16px;
   letter-spacing: 0.2em;
   color: var(--vn-ink);
-  background: transparent;
+  background: rgba(245, 236, 217, 0.78);
   border: 1px solid var(--vn-ink-muted);
   padding: 10px 32px;
   min-width: 220px;
@@ -408,6 +425,7 @@ body {
   color: var(--vn-ink-light);
   font-size: 14px;
   line-height: 1.8;
+  text-shadow: 0 0 10px rgba(245, 236, 217, 0.6);
 }
 
 .vn-title__quote footer {

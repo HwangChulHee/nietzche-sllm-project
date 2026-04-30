@@ -21,6 +21,8 @@ export default function Ep1EndingPage() {
       episode={ep1Screen8Ending.episode}
       title={ep1Screen8Ending.title}
       body={ep1Screen8Ending.body}
+      illustration={ep1Screen8Ending.illustration}
+      alt={ep1Screen8Ending.alt}
       actions={[
         { label: "[Ep 2로 계속]", onClick: () => router.push("/ep2/transition") },
         { label: "[타이틀로]", onClick: () => router.push("/") },

@@ -55,6 +55,8 @@ export default function Ep1ScenePage() {
       <NarrationScreen
         paragraphs={scene.paragraphs}
         enableHaeseol={scene.enableHaeseol}
+        illustration={scene.illustration}
+        alt={scene.alt}
         onComplete={() => router.push(NEXT[id])}
       />
     );

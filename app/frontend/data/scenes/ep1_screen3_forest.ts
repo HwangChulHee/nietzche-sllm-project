@@ -3,6 +3,8 @@ import type { NarrationScene } from "./types";
 export const ep1Screen3Forest: NarrationScene = {
   screenId: "ep1_screen3_forest",
   enableHaeseol: true,
+  illustration: "/illustrations/screen_03_prologue_forest.webp",
+  alt: "깊은 숲에서 마주친 차라투스트라와 늙은 성자",
   paragraphs: [
     {
       kind: "narration",

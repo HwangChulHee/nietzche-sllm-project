@@ -25,6 +25,8 @@ export default function TitlePage() {
   return (
     <TitleScreen
       hasSavedSlot={hasSlot}
+      illustration="/illustrations/screen_01_title.webp"
+      alt="새벽 알프스 능선과 동굴 입구의 작은 인영"
       onStart={() => router.push("/ep1/scene/2")}
       onLoad={() => router.push("/load")}
       onExit={() =>

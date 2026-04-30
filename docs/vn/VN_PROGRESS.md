@@ -8,13 +8,61 @@
 ## 현재 상태 요약
 
 **최종 업데이트**: 2026-05-01
-**현재 Phase**: 4 완료 / Phase 5 대기
-**상태**: 🟢 정적 나레이션 컴포넌트 3종 + 텍스트 데이터 4파일 + 키보드 단축키 동작. Ep 1 #1·#2·#3·#4·#8이 클릭/Space/Enter로 진행되는 작품 골격 라이브.
+**현재 Phase**: 5 완료 / Phase 6 대기
+**상태**: 🟢 16:10 책 삽화 레이아웃 + 사용자 제작 일러스트 8장(WebP) 통합. Ep 1 #1·#2·#3·#4·#8이 실제 일러스트 위에서 동작. `#4 → #5` 800ms 슬로우 페이드 wiring 완료.
 **모드**: 백엔드 `LLM_MODE=mock`
 
 ---
 
 ## 변경 로그 (최신순)
+
+### 2026-05-01 — Phase 5 완료 (책 삽화 레이아웃 + 일러스트 통합)
+
+#### 작업
+- **일러스트 자산**: 사용자가 제작한 Ep 1 8장 PNG (2624×1632, 합 ~100MB)를 1600×1000 WebP 품질 88로 변환 (Pillow). 합 ~5.8MB (94% 절감). `app/frontend/public/illustrations/screen_01_title.webp` ~ `screen_08_ending.webp`. 파일명 오타 `submit → summit` 1건 수정. 원본 PNG는 `.gitignore`로 추적 제외 (로컬 보관).
+- **신규 컴포넌트**: `Frame.tsx` (16:10 캔버스 wrapper), `IllustrationLayer.tsx` (Next/Image + mode별 비율 — narration 70% / interaction 50% / fullscreen 100%)
+- **NarrationScreen 리팩터**: 일러스트 placeholder div → IllustrationLayer(mode=narration). 텍스트박스를 *반투명 오버레이*에서 *분할 단색 박스* (하단 30%, border-top 1px ink-muted)로 전환. props에 `illustration`/`alt` 추가
+- **EndingCard 리팩터**: IllustrationLayer(mode=fullscreen) + 가독성용 옅은 세피아 vignette `__veil` (radial gradient) + 텍스트 그림자. 5초→텍스트→3초→메뉴 시퀀스 유지
+- **TitleScreen 리팩터**: IllustrationLayer(mode=fullscreen) + `__veil` + 메뉴/인용구 오버레이. 메뉴 버튼은 반투명 세피아 배경(가독성)
+- **데이터 파일 4개 갱신**: `NarrationScene` / `EndingCardData`에 `illustration`, `alt` 필드 추가
+- **VnFrame 갱신**: viewport에 검은 letterbox(`--vn-letterbox: #0d0a07`) + 안쪽 16:10 박스 (`width: min(100vw, 100vh*16/10)`, `height: min(100vh, 100vw*10/16)` 조합 — viewport 비율에 따라 letterbox 자동). `/ep1/scene/5` 진입 시 `vn-page--slow` 클래스 부착 (#4 → #5 800ms wiring)
+- **globals.css 정리**: 옛 챗봇 토큰(`--bg-primary` 등) 제거 — VN 토큰만 단일 진실 소스. `vn-illust*` 클래스 + `vn-book` + `__veil` 추가. 컴포넌트별 `__illust` / `__illust-placeholder` 옛 클래스 제거. 페이지 컴포넌트는 `body` 배경이 letterbox이므로 `--vn-bg`(세피아)는 vn-page만 보유.
+- **페이지 갱신**: `app/page.tsx` (TitleScreen에 illustration/alt 전달), `app/ep1/scene/[id]/page.tsx` (NarrationScreen에 scene.illustration/alt 전달), `app/ep1/ending/page.tsx` (EndingCard에 illustration/alt 전달)
+
+#### 산출물 — 화면별 일러스트 통합
+| 라우트 | 일러스트 | 모드 | 텍스트 영역 |
+|---|---|---|---|
+| `/` | `screen_01_title.webp` | fullscreen + veil | 가운데 메뉴 + 인용구 (그림자 부착) |
+| `/ep1/scene/2` | `screen_02_prologue_summit.webp` | narration (상 70%) | 하단 30% 단색 박스 |
+| `/ep1/scene/3` | `screen_03_prologue_forest.webp` | narration | 하단 30% 단색 박스 |
+| `/ep1/scene/4` | `screen_04_prologue_road.webp` | narration | 하단 30% 단색 박스 |
+| `/ep1/scene/5` | (placeholder) | — | `vn-page--slow` 800ms 진입 페이드 적용 |
+| `/ep1/ending` | `screen_08_ending.webp` | fullscreen + veil | 가운데 텍스트 + 하단 메뉴 (그림자 부착) |
+
+#### 검증
+- [x] `npx tsc --noEmit` 무에러
+- [x] `npm run lint` clean
+- [x] dev 서버 라이브 (`Ready in 257ms`), 10개 라우트 모두 200
+- [x] 일러스트 정적 자산 5개(타이틀·#2·#3·#4·#8) `/illustrations/*.webp` 모두 200
+- [x] SSR HTML 검증
+  - `/`: `vn-book` + `vn-illust--fullscreen` + `vn-title__veil` + `screen_01_title` + 타이틀/메뉴 텍스트
+  - `/ep1/scene/2`: `vn-book` + `vn-illust--narration` + `vn-narration__textbox` + `screen_02` + 첫 단락
+  - `/ep1/scene/5`: **`vn-page--slow`** 클래스 SSR 적용 (slowFade wiring 검증)
+  - `/ep1/ending`: `vn-book` + `vn-illust--fullscreen` + `vn-ending__veil` + `screen_08` + 텍스트/메뉴
+
+#### 알려진 한계
+- **#5~#7 placeholder**: 일러스트는 있으나 컴포넌트 미마운트 (Phase 6 인터랙션). `screen_05~07.webp`는 자산만 사용 가능, 화면 마운트 X.
+- **#8 → #4 진입 비대칭**: `vn-page--slow`는 #5 진입 시만. #4 *이탈* 페이드는 표준 600ms (route 변경 시 이전 페이지 unmount 즉시 발생, CSS-only로는 fade-out 불가능). 분위기 전환점 효과는 `#5 진입 800ms`로 단방향 흡수.
+- **세이브 / 우상단 메뉴 영역**: Frame 안 자유 absolute 슬롯이지만 컴포넌트 미부착 (Phase 7).
+- **Ep 2 일러스트 4장**: 본 작업 범위 밖. Phase 8에서 별도 자산 수령 필요.
+- **타이틀 진입 페이드 1200ms**: EP1_TEXT_AND_PROMPTS §화면 #1의 *"검은 화면 → 일러스트 페이드인 1200ms"*는 표준 600ms로 통일. 시연 폴리시에서 필요 시 `vn-page--title` 변형 추가.
+- **첫 페이드 시 텍스트가 일러스트와 동기 페이드인**: 타이틀/엔딩에서 일러스트보다 텍스트가 먼저 잠깐 떠 보일 가능성 (next/image 로드 시간차). priority=true로 완화했지만 완전 해결은 EndingCard처럼 `illust_only` 단계 추가가 필요.
+
+#### 다음 Phase
+- **Phase 6: 인터랙션 컴포넌트 (#5~#7, Ep 2 #4)**
+- 입력: `VN_UI_POLICY.md` §3 (인터랙션 정책 전부) + `EP1_TEXT_AND_PROMPTS.md` §5 #5~#7 (sLLM 호출 컨텍스트)
+- 핵심 작업: `InteractionScreen.tsx` + `MessageBox.tsx` + `InputArea.tsx` + `useInteraction.ts` 훅 + `dialogueSlice` 본격 활용 + `/api/v1/respond/auto` `/respond` `/respond/farewell` 백엔드 SSE 연결
+- 사용자 확인 필요: 화면 전환 버튼 위치 (우측 또는 하단), [세이브] 버튼 위치 (우상단)
 
 ### 2026-05-01 — Phase 4 완료 (정적 나레이션 컴포넌트 + 텍스트 데이터)
 
@@ -222,7 +270,7 @@
 | 2 | 백엔드 인터페이스 + Mock 구현 | ✅ 완료 (2026-05-01) |
 | 3 | 프론트 라우팅 + Redux 골격 | ✅ 완료 (2026-05-01) |
 | 4 | 정적 나레이션 컴포넌트 + 텍스트 | ✅ 완료 (2026-05-01) |
-| 5 | 책 삽화 레이아웃 + 페이드 + 일러스트 placeholder | ⏳ 대기 |
+| 5 | 책 삽화 레이아웃 + 페이드 + 일러스트 통합 | ✅ 완료 (2026-05-01) |
 | 6 | 인터랙션 컴포넌트 | ⏳ 대기 |
 | 7 | 해설 패널 + 모달 + 토스트 + 세이브 | ⏳ 대기 |
 | 8 | Ep 2 통합 + transition + 시연 대본 | ⏳ 대기 |
@@ -251,6 +299,16 @@
 - `POST /save`는 내부에서 `SummaryClient`를 동기 consume하여 summary 생성 후 upsert. 별도 summary 인자 받지 않음.
 - DB는 PostgreSQL 유지 (기존 셋업 그대로). VN_AGENTS.md §1의 SQLite 표기는 README 정정 시점에 처리.
 - 신규 단위/통합 테스트 미작성 (VN_AGENTS.md §3.5 *"단위 테스트 작성 시간 낭비"*). curl + smoke import로 종료 조건 충족.
+
+### Phase 5
+- **사용자가 일러스트 8장을 직접 제작**해서 일러스트 placeholder 단계 스킵. PNG 원본 2624×1632(합 ~100MB)를 Pillow로 1600×1000 WebP @ q88 변환 → 합 ~5.8MB (94% 절감). PNG는 `.gitignore`로 추적 제외, WebP만 커밋.
+- **vn.css 별도 파일 신설 안 함**. 플랜 §3 디자인 토큰은 이미 `globals.css`에 있음(Phase 3에서 추가) — 단일 진실 소스 유지가 낫다고 판단.
+- **TextLayer 컴포넌트 신설 안 함**. 플랜 §작업 영역에 명시됐으나 NarrationScreen 외 사용처 없어 `vn-narration__textbox` 인라인으로 충분. (인터랙션은 다른 컴포넌트, 엔딩/타이틀은 자체 처리.)
+- **Frame은 thin wrapper**. children + `vn-book` 클래스만. 우상단/좌하단 슬롯 props는 도입 안 함 — Phase 7([세이브]/[해설] 본격 부착)에서 필요해질 때 추가. *과한 추상화 회피*.
+- **16:10 letterbox 구현**: `width: min(100vw, calc(100vh*16/10))` + `height: min(100vh, calc(100vw*10/16))` 조합. CSS `aspect-ratio`는 width/height 둘 다 정해지면 무시되는 함정 회피.
+- **검은 배경 letterbox 색**: `--vn-letterbox: #0d0a07` (순수 검정 #000보다 살짝 따뜻). body 배경이 letterbox이고 vn-page만 세피아.
+- **풀스크린 일러스트(#1, #8) 가독성**: `__veil` (radial gradient 가운데 투명 → 가장자리 옅은 세피아) + 텍스트 그림자. 일러스트 자체가 세피아 톤이라 잉크색 텍스트 잘 읽힘.
+- **#4 → #5 800ms는 #5 *진입* 페이드만 적용**. CSS-only 라우팅이라 #4 *이탈* 페이드는 통제 불가 — 단방향으로 흡수. VnFrame이 pathname을 보고 `vn-page--slow` 분기.
 
 ### Phase 4
 - **데이터 파일 경로 `data/scenes/` 채택** (대안: `lib/scenes/`). 근거: Next.js 관행상 `lib/`은 코드 유틸, `data/`는 정적 데이터. Phase 5 일러스트 메타·Phase 8 Ep 2 텍스트도 같은 자리에 모으기 위함.
@@ -379,3 +437,4 @@ curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000/ep2/ending
 - 2026-05-01: Phase 2 완료 라인 추가 (백엔드 인터페이스 + Mock 구현, 8개 엔드포인트).
 - 2026-05-01: Phase 3 완료 라인 추가 (프론트 라우팅 8개 + Redux 5 slices + API 클라이언트 + CSS 페이드).
 - 2026-05-01: Phase 4 완료 라인 추가 (정적 나레이션 컴포넌트 3종 + ToastHost + 텍스트 데이터 4파일 + 키보드 단축키).
+- 2026-05-01: Phase 5 완료 라인 추가 (16:10 책 삽화 레이아웃 + 사용자 제작 일러스트 8장 WebP 통합 + #4→#5 800ms slowFade wiring).

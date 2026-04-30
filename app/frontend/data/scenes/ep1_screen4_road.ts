@@ -4,6 +4,8 @@ export const ep1Screen4Road: NarrationScene = {
   screenId: "ep1_screen4_road",
   enableHaeseol: true,
   slowFade: true,
+  illustration: "/illustrations/screen_04_prologue_road.webp",
+  alt: "혼자 멀어지는 차라투스트라의 뒷모습과 광활한 앞길",
   paragraphs: [
     {
       kind: "narration",

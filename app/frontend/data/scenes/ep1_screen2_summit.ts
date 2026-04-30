@@ -3,6 +3,8 @@ import type { NarrationScene } from "./types";
 export const ep1Screen2Summit: NarrationScene = {
   screenId: "ep1_screen2_summit",
   enableHaeseol: true,
+  illustration: "/illustrations/screen_02_prologue_summit.webp",
+  alt: "산 정상 동굴 앞 인물의 뒷모습과 떠오르는 해",
   paragraphs: [
     {
       kind: "narration",
