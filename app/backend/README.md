@@ -1,202 +1,214 @@
-# Backend — FastAPI 앱
+# Backend — 비주얼 노벨 sLLM 라우팅
 
-FastAPI 기반 니체 sLLM 상담 시스템 백엔드. SSE 스트리밍, SQLite 영속화, vLLM 호출을 담당합니다.
+FastAPI 기반 *얇은 sLLM 호출 라우터*. 8개 엔드포인트가 SSE 스트림으로 차라투스트라 발화 / 해설 동적 풀이 / 요약을 흘려보낸다.
 
 **관련 문서**:
-- 레이어 책임 및 규약 → [`CLAUDE.md`](./CLAUDE.md)
-- 아키텍처 설계 → [`BACKEND_STRUCTURE.md`](./BACKEND_STRUCTURE.md)
-- 전체 시스템 재현 절차 → [`../README.md`](../README.md)
+- 레이어 책임 / sLLM 클라이언트 / 환경변수 → [`CLAUDE.md`](./CLAUDE.md)
+- 아키텍처 도해 → [`BACKEND_STRUCTURE.md`](./BACKEND_STRUCTURE.md)
+- 시연 셋업 → [`../README.md`](../README.md)
+- 작품 정책 → [`../../docs/vn/VN_AGENTS.md`](../../docs/vn/VN_AGENTS.md)
 
 ---
 
 ## 실행
 
-### 1. 의존성 설치
+### 1. 의존성 설치 (최초 1회)
 
-    cd /workspace/nietzche-sllm-project/app/backend
-    poetry env info --path 2>/dev/null || TMPDIR=/tmp python3.12 -m poetry install
+```bash
+cd app/backend
+poetry env info --path 2>/dev/null || TMPDIR=/tmp python3.12 -m poetry install
+```
 
 ### 2. 환경변수 (`.env`)
 
-    LLM_MODE=vllm
-    LLM_BASE_URL=http://localhost:8002/v1
-    LLM_MODEL=nietzsche-epoch1
-    LLM_API_KEY=dummy
+`.env.example` 복사 후 수정:
 
-    SYSTEM_PROMPT_FILE=prompts/nietzsche_contemplative.txt
+```bash
+# Mock 모드 (시연 권장)
+LLM_MODE=mock
 
-    DATABASE_URL=sqlite+aiosqlite:///./nietzsche.db
+# vLLM 모드 (Phase 9, RunPod 환경)
+LLM_MODE=vllm
+VLLM_BASE_URL=http://localhost:8002/v1
+VLLM_MODEL=nietzsche-epoch1
+VLLM_API_KEY=dummy
 
-    CORS_ORIGINS=*
+# 시스템 프롬프트 (3종)
+PERSONA_PROMPT_FILE=prompts/persona_v1.txt
+EXPLAIN_PROMPT_FILE=prompts/explain_v1.txt
+SUMMARY_PROMPT_FILE=prompts/summary_v1.txt
 
-### 3. DB 마이그레이션
+# DB
+DATABASE_URL=postgresql+asyncpg://nietzsche:nietzsche@localhost:5432/nietzsche
 
-    poetry run alembic upgrade head
+# CORS
+CORS_ORIGINS=http://localhost:3000
+```
+
+### 3. DB 마이그레이션 (최초 1회)
+
+```bash
+PYTHONPATH=. poetry run alembic upgrade head
+```
+
+`save_slots` 테이블 생성. 옛 `conversations`/`messages`는 Phase 2에서 drop됨.
 
 ### 4. 서버 실행
 
-    poetry run uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```bash
+PYTHONPATH=. poetry run uvicorn main:app --port 8000
 
-프로덕션 (nohup 백그라운드):
-
-    nohup poetry run uvicorn main:app --host 0.0.0.0 --port 8000 \
-      > /workspace/tmp/backend.log 2>&1 &
+# 또는 hot reload
+PYTHONPATH=. poetry run uvicorn main:app --port 8000 --reload
+```
 
 ### 5. 헬스체크
 
-    curl -s http://localhost:8000/health
-    # → {"status":"alive","mode":"vllm"}
+```bash
+curl -s http://localhost:8000/health
+# → {"status":"alive","mode":"mock"}    (또는 "vllm")
+```
 
-`mode`가 `mock`이면 `.env`의 `LLM_MODE` 확인.
+`mode`가 예상과 다르면 `.env`의 `LLM_MODE` 확인.
 
 ---
 
 ## API 엔드포인트
 
-### `POST /api/v1/chat`
+모두 prefix `/api/v1/`. SSE 응답은 `text/event-stream`.
 
-SSE 스트리밍 엔드포인트. 사용자 메시지를 받아 vLLM에서 스트리밍 응답을 받아 전달.
+### POST `/respond` — 학습자 발화 응답
 
-요청 바디:
+Persona sLLM. 학습자 자유 발화 또는 [침묵] 응답.
 
-    {
-      "conversation_id": "uuid-or-null",
-      "message": "삶이 무의미하게 느껴집니다"
-    }
+```json
+{
+  "screen_id": "ep1_screen5_meeting",
+  "message": "산에서 내려오는 길에...",
+  "silent": false,
+  "history": [{"role": "assistant", "content": "그대. 어디서 왔는가."}]
+}
+```
 
-응답: `text/event-stream`
+`silent: true`면 시스템 프롬프트에 침묵 지시 주입.
 
-    data: {"type": "metadata", "conversation_id": "uuid-..."}
-    data: {"type": "delta", "content": "영혼의"}
-    data: {"type": "delta", "content": " 무게를"}
-    ...
-    data: {"type": "done"}
+### POST `/respond/auto` — 화면 진입 자동 발화
 
-에러 시:
+```json
+{ "screen_id": "ep1_screen6_walking", "history": [...] }
+```
 
-    data: {"type": "error", "message": "..."}
+#6/#7 동행/시장 원경 진입 시 차라투스트라 첫 발화 자동 생성.
 
-### `GET /api/v1/conversations/{conversation_id}/messages`
+### POST `/respond/farewell` — [작별을 고한다] 발화
 
-대화 복원용. 페이지 새로고침 시 프론트가 호출.
+```json
+{ "screen_id": "ep1_screen7_market_distant", "history": [...] }
+```
 
-응답:
+### POST `/explain` — [더 깊이 묻기] 동적 풀이
 
-    {
-      "conversation_id": "uuid-...",
-      "messages": [
-        {"role": "user", "content": "...", "created_at": "..."},
-        {"role": "assistant", "content": "...", "created_at": "..."}
-      ]
-    }
+Explain sLLM. 정적 풀이 위에 학습자 follow-up 질문에 응답.
 
-`system` 메시지는 응답에 포함되지 않음 (백엔드 내부 전용).
+```json
+{
+  "screen_id": "ep1_screen2_summit",
+  "query": "왜 산이었는가",
+  "history": [...]
+}
+```
 
-### `DELETE /api/v1/conversations/{conversation_id}` (신규)
+### POST `/summarize` — 카운드오버 요약
 
-대화 + 모든 메시지 영구 삭제. `Conversation.cascade="all, delete-orphan"` 덕분에 messages 자동 삭제.
+Summary sLLM. Ep 1 → Ep 2 transition 시 백그라운드 호출.
 
-응답:
+### GET `/save` / POST `/save` / DELETE `/save`
 
-    {"deleted": true, "conversation_id": "uuid-..."}
+단일 슬롯 (id=1 고정). POST는 내부에서 Summary sLLM 동기 호출 후 upsert.
 
-### `GET /health`
+---
 
-    {"status": "alive", "mode": "vllm"}
+## SSE 응답 이벤트
+
+| type | 페이로드 |
+|---|---|
+| `metadata` | `{"screen_id": "...", "kind": "..."}` 등 |
+| `delta` | `{"content": "..."}` 토큰 단위 |
+| `done` | `{}` 스트림 종료 |
+| `error` | `{"message": "..."}` |
+
+```
+data: {"type": "metadata", "screen_id": "ep1_screen5_meeting", "silent": false}
+
+data: {"type": "delta", "content": "흥"}
+
+data: {"type": "delta", "content": "미"}
+
+data: {"type": "done"}
+```
 
 ---
 
 ## 디렉토리 구조
 
-    app/backend/
-    ├── main.py                  # FastAPI 앱 + CORS + 라우터 마운트
-    ├── .env                     # 환경변수 (git ignored)
-    ├── .env.example             # 환경변수 템플릿
-    ├── pyproject.toml           # Poetry 의존성
-    ├── nietzsche.db             # SQLite (git ignored, 런타임 생성)
-    │
-    ├── core/
-    │   └── config.py            # Pydantic Settings, 환경변수 로드
-    │
-    ├── api/
-    │   └── v1/
-    │       ├── api.py           # v1 라우터 통합
-    │       └── endpoints/
-    │           └── chat.py      # /chat, /conversations/*, delete
-    │
-    ├── schemas/
-    │   └── chat.py              # Pydantic 요청/응답 모델
-    │
-    ├── services/
-    │   └── llm_client.py        # LLMClient 추상 + Mock/VLLM 구현
-    │
-    ├── models/
-    │   └── chat.py              # Conversation, Message (SQLAlchemy)
-    │
-    ├── db/
-    │   ├── session.py           # 비동기 엔진 + 세션
-    │   └── base.py              # Base + 모델 import
-    │
-    ├── alembic/
-    │   ├── env.py               # Alembic 설정
-    │   └── versions/
-    │       └── 001_initial_schema.py   # 첫 마이그레이션
-    │
-    └── prompts/
-        ├── nietzsche_v1.txt               # 기본 (fallback)
-        ├── nietzsche_contemplative.txt    # 현재 사용 (contemplative voice)
-        └── default.txt                    # 최후 fallback
+```
+app/backend/
+├── main.py                       # FastAPI 앱 + CORS
+├── core/config.py                # Settings (.env 로드)
+├── api/v1/
+│   ├── api.py                    # 라우터 등록
+│   └── endpoints/
+│       ├── respond.py            # POST /respond, /respond/auto, /respond/farewell
+│       ├── explain.py            # POST /explain
+│       ├── summarize.py          # POST /summarize
+│       └── save.py               # GET/POST/DELETE /save
+├── services/
+│   ├── llm_client.py             # 저수준 LLM 스트리밍 추상 (Mock/VLLM)
+│   ├── sllm_clients.py           # Persona/Explain/Summary 3종 ABC
+│   └── mock_data.py              # 화면별 Mock 응답 풀
+├── schemas/vn.py                 # Pydantic 모델 (8개 엔드포인트)
+├── models/save.py                # SaveSlot SQLAlchemy
+├── db/
+│   ├── session.py                # 비동기 PostgreSQL 세션
+│   ├── base.py                   # 모든 모델 통합
+│   └── reset_db.py               # 개발용 reset 헬퍼
+├── prompts/
+│   ├── persona_v1.txt
+│   ├── explain_v1.txt
+│   └── summary_v1.txt
+└── alembic/                      # 002 마이그레이션 (save_slots)
+```
 
 ---
 
-## LLM 클라이언트 전환
+## Mock vs vLLM 토글
 
-`services/llm_client.py`에 두 구현체가 있고, `LLM_MODE` 환경변수로 전환.
+```bash
+# 시연 안정성 (기본)
+LLM_MODE=mock
 
-- `LLM_MODE=mock` → `MockLLMClient`: 하드코딩 응답 한 글자씩 yield (개발/테스트용)
-- `LLM_MODE=vllm` → `VLLMClient`: OpenAI SDK로 vLLM 호출 (프로덕션)
+# 실제 추론 (Phase 9)
+LLM_MODE=vllm
+```
 
-두 구현체 모두 같은 `AsyncIterator[str]` 인터페이스. 백엔드 재시작 시 `.env` 값을 읽어 결정.
+`services/sllm_clients.py`의 싱글턴 팩토리(`get_persona_client()` 등)가 `settings.LLM_MODE`로 분기. `Mock*Client`는 `mock_data.py`의 응답 풀에서 yield, `VLLM*Client`는 `LLMClient` 저수준으로 vLLM OpenAI 호환 API 호출.
 
----
-
-## System Prompt 관리
-
-`prompts/` 디렉토리의 텍스트 파일을 `SYSTEM_PROMPT_FILE` 환경변수로 선택.
-
-현재: `prompts/nietzsche_contemplative.txt`
-
-    나는 프리드리히 니체다. 나는 통찰을 던지고, 답을 강요하지 않는다. 나는 인간이 스스로 묻게 만든다.
-
-이 문장은 학습 데이터의 `contemplative_aphorism` voice 3개 variation 중 하나 (32.8% 비율).
-
-`services/llm_client.py`에서 프로세스 시작 시 한 번만 파일 읽어서 메모리 캐싱. 파일 수정 후에는 백엔드 재시작 필요.
+코드 수정 없이 환경변수만 토글.
 
 ---
 
 ## 트러블슈팅
 
-### 백엔드가 시작은 되는데 `{"mode":"mock"}` 반환
+### `/save` 가 500 응답
+DB 마이그레이션 미적용. `poetry run alembic upgrade head` 실행.
 
-`.env`에 `LLM_MODE=vllm` 설정 누락.
+### `/health`가 `{"mode":"mock"}` 반환되는데 vLLM 쓰고 싶음
+`.env`의 `LLM_MODE=vllm` 확인 후 백엔드 재시작.
 
-### `alembic upgrade head` 실패
+### CORS 에러
+`.env`의 `CORS_ORIGINS`에 프론트엔드 origin 추가 (`http://localhost:3000`). 여러 origin은 `,` 구분.
 
-`nietzsche.db` 파일이 이미 있는 상태에서 마이그레이션 버전이 꼬였을 가능성.
-
-해결: DB 삭제 후 재생성.
-
-    rm nietzsche.db
-    poetry run alembic upgrade head
-
-### vLLM 연결 실패 (503 또는 connection refused)
-
-vLLM 서버가 안 떠있거나 8002 포트 점유 확인.
-
-    curl -s http://localhost:8002/v1/models
-
-응답 없으면 vLLM 재시작 ([`../README.md`](../README.md) 1단계 참조).
-
-### Poetry 환경 깨짐 (pod 재시작 후)
-
-    TMPDIR=/tmp python3.12 -m poetry install
+### vLLM 연결 실패
+1. vLLM 서버 살아있는지: `curl http://localhost:8002/v1/models`
+2. `VLLM_BASE_URL`이 정확한지 (RunPod 환경이면 Cloudflare tunnel URL)
+3. 백엔드 로그에서 에러 확인
