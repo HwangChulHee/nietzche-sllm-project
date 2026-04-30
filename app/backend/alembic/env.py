@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from models.base import Base
-from models.chat import Conversation, Message  # noqa: F401
+from models.save import SaveSlot  # noqa: F401
 from core.config import settings
 
 config = context.config

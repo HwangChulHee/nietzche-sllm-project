@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from models.base import Base
-from models.chat import Conversation, Message  # noqa: F401
+from models.save import SaveSlot  # noqa: F401
 
 
 def _get_db_url() -> str:

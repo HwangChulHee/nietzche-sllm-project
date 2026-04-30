@@ -24,7 +24,7 @@ load_dotenv(
 from main import app
 from db.session import get_db
 from models.base import Base
-from models.chat import Conversation, Message  # noqa: F401
+from models.save import SaveSlot  # noqa: F401
 
 TEST_DATABASE_URL = os.environ["DATABASE_URL"]
 

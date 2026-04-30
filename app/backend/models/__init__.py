@@ -1,1 +1,1 @@
-from .chat import Conversation, Message  # noqa: F401
+from .save import SaveSlot  # noqa: F401
