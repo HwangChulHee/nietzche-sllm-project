@@ -7,15 +7,9 @@
 
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
-import type { Episode } from "./episodeSlice";
+import type { SaveSlot } from "@/lib/api/types";
 
-export interface SaveSlot {
-  episode: Episode;
-  scene_index: number;
-  summary: string;
-  recent_messages: { role: "user" | "assistant"; content: string }[];
-  timestamp: string;
-}
+export type { SaveSlot };
 
 interface SaveState {
   slot: SaveSlot | null;

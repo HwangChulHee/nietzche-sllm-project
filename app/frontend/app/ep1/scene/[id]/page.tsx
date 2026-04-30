@@ -67,6 +67,7 @@ export default function Ep1ScenePage() {
   if (narration) {
     return (
       <NarrationScreen
+        screenId={narration.screenId}
         paragraphs={narration.paragraphs}
         enableHaeseol={narration.enableHaeseol}
         illustration={narration.illustration}
@@ -81,6 +82,8 @@ export default function Ep1ScenePage() {
     return (
       <InteractionScreen
         scene={interaction}
+        episode="ep1"
+        sceneIndex={Number.parseInt(id, 10)}
         onComplete={() => navigate(NEXT[id])}
         onBack={() => navigate(PREV[id])}
       />

@@ -3,17 +3,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { BackButton } from "./BackButton";
 import { Frame } from "./Frame";
+import { HaeseolPanel } from "./HaeseolPanel";
 import { IllustrationLayer } from "./IllustrationLayer";
 import type { Paragraph } from "@/data/scenes/types";
-import { showToast } from "@/lib/store/uiSlice";
-import { useAppDispatch } from "@/lib/hooks/useAppDispatch";
+import { useAppDispatch, useAppSelector } from "@/lib/hooks/useAppDispatch";
+import { openPanel } from "@/lib/store/haeseolSlice";
 
 const FADE_MS = 600;
 
 /**
  * 본문 안 `**...**` 마크다운식 강조 토큰을 <em class="vn-emph">로 변환.
- * 강조 부분 외 텍스트는 그대로 노출. (multiline / 빈 마커 등 edge case는
- * 작성자 책임 — VN 텍스트는 사람이 직접 작성하므로 단순 split로 충분.)
  */
 function renderInline(text: string): React.ReactNode[] {
   return text.split(/(\*\*[^*]+\*\*)/g).map((seg, i) => {
@@ -29,6 +28,7 @@ function renderInline(text: string): React.ReactNode[] {
 }
 
 type Props = {
+  screenId: string;
   paragraphs: Paragraph[];
   enableHaeseol: boolean;
   illustration: string;
@@ -40,6 +40,7 @@ type Props = {
 type Phase = "in" | "idle" | "out" | "exit";
 
 export function NarrationScreen({
+  screenId,
   paragraphs,
   enableHaeseol,
   illustration,
@@ -48,6 +49,7 @@ export function NarrationScreen({
   onBack,
 }: Props) {
   const dispatch = useAppDispatch();
+  const haeseolOpen = useAppSelector((s) => s.haeseol.open);
   const [index, setIndex] = useState(0);
   const [phase, setPhase] = useState<Phase>("in");
   const completedRef = useRef(false);
@@ -59,6 +61,7 @@ export function NarrationScreen({
   }, [phase, index]);
 
   const advance = useCallback(() => {
+    if (haeseolOpen) return; // 해설 패널 열려있으면 진행 차단
     if (phase !== "idle" || completedRef.current) return;
     if (index >= paragraphs.length - 1) {
       completedRef.current = true;
@@ -71,10 +74,10 @@ export function NarrationScreen({
       setIndex((i) => i + 1);
       setPhase("in");
     }, FADE_MS);
-  }, [phase, index, paragraphs.length, onComplete]);
+  }, [haeseolOpen, phase, index, paragraphs.length, onComplete]);
 
-  /** 첫 단락이면 이전 화면, 아니면 한 단락 전. */
   const goBack = useCallback(() => {
+    if (haeseolOpen) return;
     if (phase !== "idle" || completedRef.current) return;
     if (index === 0) {
       onBack();
@@ -85,10 +88,11 @@ export function NarrationScreen({
       setIndex((i) => Math.max(0, i - 1));
       setPhase("in");
     }, FADE_MS);
-  }, [phase, index, onBack]);
+  }, [haeseolOpen, phase, index, onBack]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (haeseolOpen) return;
       if (e.key === " " || e.key === "Spacebar" || e.key === "Enter") {
         e.preventDefault();
         advance();
@@ -96,20 +100,15 @@ export function NarrationScreen({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [advance]);
+  }, [advance, haeseolOpen]);
 
   const onHaeseolClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    dispatch(
-      showToast({
-        message: "[해설] 패널은 Phase 7에서 구현됩니다.",
-        durationMs: 1800,
-      }),
-    );
+    dispatch(openPanel({ screenId }));
   };
 
   const para = paragraphs[index];
-  const showIndicator = phase === "idle";
+  const showIndicator = phase === "idle" && !haeseolOpen;
   const fading = phase !== "idle";
   const inFlight = fading;
 
@@ -123,7 +122,7 @@ export function NarrationScreen({
           priority
         />
 
-        <BackButton onClick={goBack} disabled={inFlight} />
+        <BackButton onClick={goBack} disabled={inFlight || haeseolOpen} />
 
         <div className="vn-narration__textbox">
           <p
@@ -153,6 +152,8 @@ export function NarrationScreen({
             [해설]
           </button>
         )}
+
+        {enableHaeseol && <HaeseolPanel screenId={screenId} />}
       </div>
     </Frame>
   );

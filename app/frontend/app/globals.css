@@ -229,7 +229,7 @@ body {
 
 .vn-narration__haeseol {
   position: absolute;
-  left: 24px;
+  left: 130px;
   bottom: 18px;
   font-family: var(--vn-font-serif);
   font-size: 15px;
@@ -642,34 +642,363 @@ body {
   border-color: var(--vn-bg-darker);
 }
 
-/* ─── Back Button (좌상단, 모든 화면 공통) ────────── */
+/* ─── Back Button (좌하단, 모든 화면 공통) ────────── */
 
 .vn-back {
   position: absolute;
-  top: 18px;
+  bottom: 18px;
   left: 24px;
   font-family: var(--vn-font-serif);
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 500;
   letter-spacing: 0.06em;
-  color: var(--vn-ink-light);
-  background: rgba(245, 236, 217, 0.7);
-  border: 1px solid transparent;
-  padding: 7px 14px;
+  color: var(--vn-ink);
+  background: rgba(245, 236, 217, 0.92);
+  border: 1px solid var(--vn-ink-muted);
+  padding: 7px 16px;
   cursor: pointer;
   z-index: 3;
-  transition: color 200ms ease, background 200ms ease, border-color 200ms ease;
+  transition: color 200ms ease, background 200ms ease, border-color 200ms ease, opacity 200ms ease;
 }
 
 .vn-back:hover:not(:disabled) {
-  color: var(--vn-ink);
   background: var(--vn-bg-darker);
-  border-color: var(--vn-ink-muted);
+  border-color: var(--vn-ink);
 }
 
+/* disabled 상태에서도 위치는 그대로 — 학습자가 *지금은 못 누른다*는
+   상태를 인지할 수 있게 흐릿하게 노출. */
 .vn-back:disabled {
-  opacity: 0;
-  cursor: default;
-  pointer-events: none;
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ─── Save Button (#5~#7 우상단) ────────────────── */
+
+.vn-save {
+  position: absolute;
+  top: 18px;
+  right: 24px;
+  font-family: var(--vn-font-serif);
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--vn-ink);
+  background: rgba(245, 236, 217, 0.92);
+  border: 1px solid var(--vn-ink-muted);
+  padding: 7px 16px;
+  cursor: pointer;
+  z-index: 3;
+  transition: color 200ms ease, background 200ms ease, border-color 200ms ease, opacity 200ms ease;
+}
+
+.vn-save:hover:not(:disabled) {
+  background: var(--vn-bg-darker);
+  border-color: var(--vn-ink);
+}
+
+.vn-save:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* ─── Haeseol Panel (#2~#4 / Ep 2 #1~#3 우측 슬라이드) ── */
+
+.vn-haeseol {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 50%;
+  height: 100%;
+  background: var(--vn-bg-darker);
+  border-left: 1px solid var(--vn-ink-muted);
+  transform: translateX(100%);
+  transition: transform 380ms ease;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--vn-font-serif);
+}
+
+.vn-haeseol--open {
+  transform: translateX(0);
+}
+
+.vn-haeseol__header {
+  display: flex;
+  justify-content: flex-end;
+  padding: 14px 24px 0;
+}
+
+.vn-haeseol__close {
+  font-family: var(--vn-font-serif);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  color: var(--vn-ink-light);
+  background: transparent;
+  border: none;
+  padding: 6px 8px;
+  cursor: pointer;
+  transition: color 200ms ease;
+}
+
+.vn-haeseol__close:hover {
+  color: var(--vn-ink);
+}
+
+.vn-haeseol__scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 36px 16px;
+}
+
+.vn-haeseol__title {
+  font-size: 18px;
+  letter-spacing: 0.16em;
+  color: var(--vn-ink);
+  font-weight: 400;
+  margin-bottom: 16px;
+}
+
+.vn-haeseol__divider {
+  color: var(--vn-ink-muted);
+  letter-spacing: 0.1em;
+  font-size: 13px;
+  margin-bottom: 18px;
+}
+
+.vn-haeseol__summary {
+  font-size: 15px;
+  line-height: 1.85;
+  color: var(--vn-ink);
+  margin-bottom: 24px;
+}
+
+.vn-haeseol__quotes-header,
+.vn-haeseol__dynamic-header {
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  color: var(--vn-ink);
+  margin-bottom: 12px;
+  margin-top: 4px;
+}
+
+.vn-haeseol__quote-block {
+  margin-bottom: 20px;
+}
+
+.vn-haeseol__quote {
+  font-style: italic;
+  color: var(--vn-ink);
+  font-size: 15px;
+  line-height: 1.75;
+  padding-left: 18px;
+  border-left: 2px solid var(--vn-ink-muted);
+  margin-bottom: 8px;
+}
+
+.vn-haeseol__explanation {
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--vn-ink);
+}
+
+.vn-haeseol__user {
+  margin-top: 14px;
+  font-size: 14px;
+  color: var(--vn-ink-light);
+}
+
+.vn-haeseol__user-mark {
+  display: inline-block;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--vn-ink-muted);
+  margin-right: 8px;
+}
+
+.vn-haeseol__user-text {
+  font-style: italic;
+}
+
+.vn-haeseol__answer {
+  margin-top: 8px;
+  margin-bottom: 14px;
+  padding-left: 12px;
+  border-left: 1px solid var(--vn-ink-muted);
+  font-size: 14px;
+  line-height: 1.8;
+  color: var(--vn-ink);
+  white-space: pre-wrap;
+}
+
+.vn-haeseol__answer--waiting {
+  font-style: italic;
+  color: var(--vn-ink-light);
+}
+
+.vn-haeseol__error {
+  margin-top: 12px;
+  font-size: 12px;
+  color: #8b2e1f;
+  font-style: italic;
+}
+
+.vn-haeseol__empty {
+  font-size: 14px;
+  color: var(--vn-ink-light);
+  font-style: italic;
+}
+
+.vn-haeseol__input {
+  border-top: 1px solid var(--vn-ink-muted);
+  padding: 14px 24px 16px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  background: var(--vn-bg-darker);
+}
+
+.vn-haeseol__textarea {
+  flex: 1;
+  resize: none;
+  font-family: var(--vn-font-serif);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--vn-ink);
+  background: var(--vn-bg);
+  border: 1px solid var(--vn-ink-muted);
+  padding: 8px 12px;
+  outline: none;
+  transition: border-color 150ms ease;
+}
+
+.vn-haeseol__textarea:focus {
+  border-color: var(--vn-ink);
+}
+
+.vn-haeseol__textarea:disabled {
+  background: var(--vn-bg-darker);
+  cursor: not-allowed;
+}
+
+.vn-haeseol__ask {
+  font-family: var(--vn-font-serif);
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  color: var(--vn-ink);
+  background: transparent;
+  border: 1px solid var(--vn-ink-muted);
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: background 200ms ease;
+}
+
+.vn-haeseol__ask:hover:not(:disabled) {
+  background: var(--vn-bg-darker);
+}
+
+.vn-haeseol__ask:disabled {
+  color: var(--vn-ink-muted);
+  cursor: not-allowed;
+}
+
+/* ─── Modal (공용, 평이한 시스템 톤) ────────────── */
+
+.vn-modal__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 90;
+  animation: vn-fade-in 200ms ease forwards;
+}
+
+.vn-modal {
+  background: var(--vn-bg);
+  border: 1px solid var(--vn-ink-muted);
+  font-family: var(--vn-font-serif);
+  color: var(--vn-ink);
+  min-width: 360px;
+  max-width: 540px;
+  padding: 28px 32px;
+}
+
+.vn-modal__title {
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+}
+
+.vn-modal__divider {
+  color: var(--vn-ink-muted);
+  margin-bottom: 18px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}
+
+.vn-modal__body {
+  font-size: 15px;
+  line-height: 1.8;
+  margin-bottom: 24px;
+}
+
+.vn-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.vn-modal__action {
+  font-family: var(--vn-font-serif);
+  font-size: 14px;
+  letter-spacing: 0.05em;
+  color: var(--vn-ink);
+  background: transparent;
+  border: 1px solid var(--vn-ink-muted);
+  padding: 8px 18px;
+  cursor: pointer;
+  transition: background 200ms ease;
+}
+
+.vn-modal__action:hover {
+  background: var(--vn-bg-darker);
+}
+
+.vn-modal__action--primary {
+  background: var(--vn-ink);
+  color: var(--vn-bg);
+  border-color: var(--vn-ink);
+}
+
+.vn-modal__action--primary:hover {
+  background: var(--vn-ink-light);
+}
+
+/* 불러오기 모달 미리보기 */
+
+.vn-load-preview__scene {
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+.vn-load-preview__time {
+  font-size: 12px;
+  color: var(--vn-ink-light);
+  letter-spacing: 0.04em;
+  margin-bottom: 18px;
+}
+
+.vn-load-preview__summary {
+  font-style: italic;
+  color: var(--vn-ink-light);
+  font-size: 14px;
+  line-height: 1.7;
+  padding-left: 12px;
+  border-left: 2px solid var(--vn-ink-muted);
 }
 
 /* ─── Transition Overlay (라우트 변경 시 검은 페이드) ── */

@@ -8,13 +8,62 @@
 ## 현재 상태 요약
 
 **최종 업데이트**: 2026-05-01
-**현재 Phase**: 6 완료 / Phase 7 대기
-**상태**: 🟢 Ep 1 #1→#2→#3→#4→#5→#6→#7→#8 전체 흐름이 Mock SSE 백엔드와 함께 라이브. 인터랙션 3종(`#5`/`#6`/`#7`)이 자동 발화·학습자 발화·침묵·화면 전환·작별 발화까지 동작.
+**현재 Phase**: 7 완료 / Phase 8 대기
+**상태**: 🟢 Ep 1 풀 사이클(타이틀 → 정적 나레이션 + 해설 패널 → 인터랙션 + 저장/불러오기 → 엔딩)이 Mock 모드로 동작. [해설] 패널·[저장]·[불러오기]·뒤로 가기·전환 오버레이 모두 라이브. Ep 2 정적 풀이 3개도 데이터로 미리 준비.
 **모드**: 백엔드 `LLM_MODE=mock`
 
 ---
 
 ## 변경 로그 (최신순)
+
+### 2026-05-01 — Phase 7 완료 (해설 패널 + 모달 + 토스트 + 세이브)
+
+#### 작업
+- **정적 풀이 데이터 6개 (사용자 직접 작성, 200~380자/화면)**: `data/haeseol/types.ts` (HaeseolEntry/HaeseolQuote) + Ep 1 #2/#3/#4 + Ep 2 #1/#2/#3 + 레지스트리 (`getHaeseolByScreenId`)
+- **Modal 공용 컴포넌트**: 백드롭(`rgba(0,0,0,0.45)`, fixed) + 평이한 시스템 톤. ESC + 백드롭 클릭으로 닫기. primary 액션 잉크 배경.
+- **HaeseolPanel**: 우측 슬라이드 50% 패널 (380ms ease, `transform: translateX(100%) → 0`). 정적 풀이(제목 + 한 줄 요약 + 인용/풀이 블록) + 동적 풀이([더 깊이 묻기] 입력창 + 응답 누적 + waiting `…`). ESC + [해설 닫기]로 닫기.
+- **useExplain 훅**: `streamExplain` SSE → haeseolSlice 누적. 같은 화면 안에서 history 누적 → 백엔드 `/explain`에 컨텍스트 전달. 화면 전환 시 자동 reset (screenId 의존성).
+- **NarrationScreen 해설 통합**: [해설] 클릭 시 `dispatch(openPanel({ screenId }))` → HaeseolPanel 마운트. 패널 open 동안 `advance` / `goBack` / Space/Enter 모두 차단. ▼ 인디케이터도 숨김.
+- **useSave 훅**: `getSave` / `postSave` / `deleteSave` 래핑 + saveSlice 동기화. `refresh` / `save` / `clear` API. `saveSlice.SaveSlot`을 `lib/api/types.ts`에서 re-export하여 타입 단일화.
+- **InteractionScreen [저장] 버튼**: 우상단 (`top: 18px, right: 24px`, BackButton과 대칭). 동작:
+  - 슬롯 없음 → 즉시 `postSave` → 토스트 *"저장되었습니다"*
+  - 슬롯 있음 → Modal 확인 (*"기존 저장 데이터를 덮어씁니다. 진행하시겠습니까?"*) → [덮어쓰기] 클릭 시 저장 + 토스트
+  - 비활성: streaming 중 / 저장 중 / 메시지 0개 (자동 발화 전)
+  - 진입 시 `refresh()` 호출하여 슬롯 미리 fetch → 정확한 분기
+- **TitleScreen [불러오기] 모달**: page (`app/page.tsx`)가 `useSave` + 모달 마운트. 슬롯 없음 → *"저장된 게임이 없습니다"* + [돌아가기]. 슬롯 있음 → 미리보기 (Ep/scene_index + timestamp + summary italic) + [취소] / [불러오기]. [불러오기] 클릭 시 `slotToPath(slot)`로 navigate.
+- **타이틀 [불러오기]가 모달로 직접 처리** → 기존 `/load` 라우트는 placeholder 그대로 (별도 정리 X — 사용자 확인 없이 라우트 자체 제거는 보류).
+- **globals.css**: `.vn-haeseol*` (우측 슬라이드 + 정적/동적 풀이 + 입력창) + `.vn-modal*` (백드롭 + 패널 + primary 버튼) + `.vn-save` (우상단) + `.vn-load-preview*` (불러오기 모달 미리보기)
+
+#### 산출물 — 활성 화면별 매트릭스
+| 라우트 | [해설] | [저장] | [불러오기] |
+|---|---|---|---|
+| `/` (타이틀) | — | — | ✅ 모달 |
+| `/ep1/scene/2`/3/4 | ✅ 우측 슬라이드 | — | — |
+| `/ep1/scene/5`/6/7 | — | ✅ 우상단 | — |
+| `/ep1/ending` | — | — | — |
+
+#### 검증
+- [x] `npx tsc --noEmit` 무에러 (saveSlice ↔ api/types SaveSlot 타입 통일 후)
+- [x] `npm run lint` clean
+- [x] 백엔드(mock) + 프론트 dev 동시 기동
+- [x] 4개 라우트 200
+- [x] `/api/v1/explain` SSE mock 정상 스트리밍 (metadata + delta)
+- [x] SSR HTML: `/ep1/scene/2`에 `vn-haeseol` 패널 + "해설" 버튼 + "서문 1절" 정적 풀이 텍스트 / `/ep1/scene/5`에 `vn-save` 우상단 / `/`에는 `vn-save` 없음
+- [ ] **`/save` GET/POST/DELETE 라이브 동작은 PostgreSQL + Alembic 002 적용이 필요** — 사용자 시연 환경에서 `cd app/backend && PYTHONPATH=. poetry run alembic upgrade head` 한 번 실행 권장. 코드는 정상이지만 DB 미적용 환경에서는 [저장] 클릭 시 토스트 *"저장에 실패했습니다"* 노출.
+
+#### 알려진 한계
+- **DB 미적용**: Phase 2부터 누적된 한계. 시연 셋업 시 `alembic upgrade head` 필요. 미적용 시 [저장]/[불러오기] 흐름 라이브 검증 불가.
+- **/load 라우트 placeholder 잔존**: 타이틀 [불러오기]는 모달로 처리되어 라우트 미사용. 별도 정리는 사용자 확인 후.
+- **모달 백드롭 fixed (frame 외부 letterbox까지 덮음)**: VN_UI_POLICY §6.4의 *"frame 내부 absolute"*와 차이 있음. 사용자 시각 일관성을 위해 fixed 채택 — letterbox 영역도 어둠 처리되어 모달 집중도 향상. 정책 미세 변경.
+- **수동 스크롤 일시 정지 미구현(해설 패널 / 메시지박스 공통)**: 항상 자동 스크롤. 시연 환경 영향 작음.
+- **에러 토스트 톤이 시스템적**: `/respond/auto` 실패 시 Phase 6의 *"길이 잠시 끊겼습니다"*를 그대로 가져왔지만 백엔드 미응답 시 *"저장에 실패했습니다"* 같은 평이한 톤 혼재. Phase 8 시연 폴리시에서 통일.
+- **TitleScreen이 hasSavedSlot prop을 받지만 useSave를 직접 호출하진 않음**: 별 차이 없으나 page → TitleScreen으로 prop 흐름이 한 단계 더 거침. 의도된 분리 (TitleScreen은 표현, page는 데이터/모달).
+
+#### 다음 Phase
+- **Phase 8: Ep 2 통합 + transition + 시연 시나리오**
+- 입력: `VN_UI_POLICY.md` §7 (Ep 2 정책) + 사용자 작성 Ep 2 본문 텍스트 (3화면 + 엔딩)
+- 핵심 작업: `data/scenes/ep2_*.ts` 본문 텍스트 (위버멘쉬 선포 / 광대 사건 등) + `TransitionEp2.tsx` (3초 검은 페이드 + transition 텍스트 + 백그라운드 요약 sLLM) + Ep 2 라우트 마운트 + `demo/scenario_script.md` 시연 대본
+- 사용자 확인 필요: Ep 2 #1~#3 본문 텍스트 (Ep 2 정적 풀이는 이미 Phase 7에서 데이터로 작성됨)
 
 ### 2026-05-01 — Phase 6 완료 (인터랙션 컴포넌트 + Mock SSE 통합)
 
@@ -313,7 +362,7 @@
 | 4 | 정적 나레이션 컴포넌트 + 텍스트 | ✅ 완료 (2026-05-01) |
 | 5 | 책 삽화 레이아웃 + 페이드 + 일러스트 통합 | ✅ 완료 (2026-05-01) |
 | 6 | 인터랙션 컴포넌트 | ✅ 완료 (2026-05-01) |
-| 7 | 해설 패널 + 모달 + 토스트 + 세이브 | ⏳ 대기 |
+| 7 | 해설 패널 + 모달 + 토스트 + 세이브 | ✅ 완료 (2026-05-01) |
 | 8 | Ep 2 통합 + transition + 시연 대본 | ⏳ 대기 |
 | 9 | (별도) vLLM 실제 연결 + RAG + 요약 sLLM | 🔵 Phase 8 후 |
 
@@ -340,6 +389,16 @@
 - `POST /save`는 내부에서 `SummaryClient`를 동기 consume하여 summary 생성 후 upsert. 별도 summary 인자 받지 않음.
 - DB는 PostgreSQL 유지 (기존 셋업 그대로). VN_AGENTS.md §1의 SQLite 표기는 README 정정 시점에 처리.
 - 신규 단위/통합 테스트 미작성 (VN_AGENTS.md §3.5 *"단위 테스트 작성 시간 낭비"*). curl + smoke import로 종료 조건 충족.
+
+### Phase 7
+- **정적 풀이 6개 모두 작성 (Ep 1 + Ep 2)**: 사용자가 한 번에 6개 다 줘서 Ep 2도 미리 작성. Phase 8 진입 시 데이터 준비 완료 — 본문 텍스트만 받으면 Ep 2 마운트 가능.
+- **HaeseolPanel은 NarrationScreen 자식으로 마운트** (페이지 직접 X). NarrationScreen이 `enableHaeseol` true일 때만 마운트하므로 #5~#7 인터랙션에서는 자동 unmount. open 상태는 haeseolSlice가 단일 진실 소스.
+- **useExplain은 HaeseolPanel에서 호출, NarrationScreen은 dispatch만**: 두 군데에서 useExplain 호출 시 reset effect가 두 번 발생하므로 단일 호출. NarrationScreen은 `openPanel` dispatch + `haeseol.open` selector만 사용.
+- **모달 백드롭 fixed 채택** (정책 §6.4 "frame 내부 absolute" 변경): viewport 풀스크린이 모달 집중도 더 높음. letterbox 영역까지 어두워지는 것이 시연에 더 몰입감.
+- **세이브 사용자 흐름은 useSave 훅 한 곳에**: API + saveSlice 동기화 통합. InteractionScreen / TitlePage 둘 다 동일 훅 사용. 슬롯 정보가 한 군데에서 관리되어 양쪽 분기가 일관.
+- **slot 상태가 마운트 시 자동 fetch**: TitlePage / InteractionScreen 둘 다 `refresh()` 호출. saveSlice 미초기화 상태에서 [저장] 클릭 시 *"덮어쓰기 모달 누락"* 회피.
+- **slotToPath / sceneLabel 헬퍼는 page 안 함수 (별도 모듈 X)**: 단일 사용처라 모듈화 불필요.
+- **/load 라우트는 그대로 placeholder 유지**: 타이틀 모달로 흡수했지만 라우트 자체 삭제는 사용자 확인이 없어 보류. 향후 정리 가능.
 
 ### Phase 6
 - **#5 첫 발화는 고정 텍스트 + 시뮬 스트리밍** 채택 (EP1_TEXT_AND_PROMPTS §화면 #5 *"안정성"* 명시). 32ms/char로 sLLM 응답과 동일한 체감. sLLM 호출 X.
@@ -489,3 +548,4 @@ curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000/ep2/ending
 - 2026-05-01: Phase 4 완료 라인 추가 (정적 나레이션 컴포넌트 3종 + ToastHost + 텍스트 데이터 4파일 + 키보드 단축키).
 - 2026-05-01: Phase 5 완료 라인 추가 (16:10 책 삽화 레이아웃 + 사용자 제작 일러스트 8장 WebP 통합 + #4→#5 800ms slowFade wiring).
 - 2026-05-01: Phase 6 완료 라인 추가 (인터랙션 컴포넌트 4종 + useInteraction 훅 + Mock SSE 통합 + farewell 흐름).
+- 2026-05-01: Phase 7 완료 라인 추가 (해설 패널 우측 슬라이드 + Modal 공용 + useSave/useExplain 훅 + 정적 풀이 6개 + [저장]/[불러오기] 모달 흐름).
