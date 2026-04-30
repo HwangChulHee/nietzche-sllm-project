@@ -8,13 +8,54 @@
 ## 현재 상태 요약
 
 **최종 업데이트**: 2026-05-01
-**현재 Phase**: 5 완료 / Phase 6 대기
-**상태**: 🟢 16:10 책 삽화 레이아웃 + 사용자 제작 일러스트 8장(WebP) 통합. Ep 1 #1·#2·#3·#4·#8이 실제 일러스트 위에서 동작. `#4 → #5` 800ms 슬로우 페이드 wiring 완료.
+**현재 Phase**: 6 완료 / Phase 7 대기
+**상태**: 🟢 Ep 1 #1→#2→#3→#4→#5→#6→#7→#8 전체 흐름이 Mock SSE 백엔드와 함께 라이브. 인터랙션 3종(`#5`/`#6`/`#7`)이 자동 발화·학습자 발화·침묵·화면 전환·작별 발화까지 동작.
 **모드**: 백엔드 `LLM_MODE=mock`
 
 ---
 
 ## 변경 로그 (최신순)
+
+### 2026-05-01 — Phase 6 완료 (인터랙션 컴포넌트 + Mock SSE 통합)
+
+#### 작업
+- **신규 컴포넌트 4종**: `useInteraction.ts` 훅, `InteractionScreen.tsx`, `MessageBox.tsx`, `InputArea.tsx`
+- **`useInteraction` 훅**: 진입 시 `resetForScreen` + 800ms(페이드 600 + 정적 200) 대기 후 자동 발화 시퀀스 트리거. `firstUtterance.kind === "fixed"`(#5)는 32ms/char 시뮬 스트리밍, `"auto"`(#6/#7)는 `streamRespondAuto` SSE 호출. `send` / `silent` / `farewell` 액션 노출. `streamingState !== "idle"` 가드로 동시 호출 방지. unmount 시 `AbortController.abort()`.
+- **`MessageBox`**: 누적 스크롤 (메시지 변경 시 `scrollTop = scrollHeight` 자동 — 수동 스크롤 일시정지는 P1로 미룸). 화자별 시각 분리 (좌-차라투스트라 진한 잉크 / 우-그대 옅은 잉크). 침묵 메시지는 `…` italic + ink-muted. assistant 응답 booting 단계는 빈 streaming 메시지를 italic `…`로 렌더 (delta 들어오면 즉시 본문 대체).
+- **`InputArea`**: textarea 자동 높이 (1줄 → 최대 120px). 500자 카운터 (`217 / 500`), 450자 초과 진해짐, 500자 초과 [발화하기] 비활성. [발화하기] (빈 입력 비활성), [침묵] (항상 활성), 화면 전환 버튼 (canTransition만 활성). 스트리밍 중 textarea/모든 버튼 비활성, placeholder `…`. Enter 전송 / Shift+Enter 줄바꿈.
+- **`InteractionScreen`**: Frame + IllustrationLayer(`mode="interaction"`, 상 50%) + 하단 50% 박스(MessageBox + InputArea). farewell 흐름 자체 관리 — `[작별을 고한다 →]` 클릭 시 `ix.farewell()` 호출 → 라벨이 `[엔딩으로 →]`로 전환 → 학습자 추가 send/silent 가능 → 다시 클릭 시 `onComplete`.
+- **데이터 메타**: `data/scenes/ep1_screen5_meeting.ts` (firstUtterance="그대.\n어디서 왔는가." 고정), `ep1_screen6_walking.ts` (auto), `ep1_screen7_market_distant.ts` (auto + farewell=true). `types.ts`에 `InteractionScene` 타입 추가.
+- **`ep1/scene/[id]/page.tsx`**: id ∈ {5,6,7}일 때 `InteractionScreen` 마운트. NEXT 라우팅 #5→#6→#7→#8.
+- **`globals.css` 인터랙션 스타일**: `.vn-interaction` + `.vn-msgbox*` (화자별 색·정렬·italic 침묵·waiting 인디케이터) + `.vn-input*` (textarea·카운터·버튼·전환 버튼 활성/비활성).
+
+#### 산출물 — 인터랙션 화면 매트릭스
+| 라우트 | screenId | 첫 발화 | 전환 라벨 | 작별 흐름 |
+|---|---|---|---|---|
+| `/ep1/scene/5` | `ep1_screen5_meeting` | 고정 `"그대.\n어디서 왔는가."` (시뮬 스트림) | `[그와 함께 걷는다 →]` | — |
+| `/ep1/scene/6` | `ep1_screen6_walking` | `/respond/auto` SSE | `[시장이 가까워진다 →]` | — |
+| `/ep1/scene/7` | `ep1_screen7_market_distant` | `/respond/auto` SSE | `[작별을 고한다 →]` → `[엔딩으로 →]` | `/respond/farewell` SSE |
+
+#### 검증
+- [x] `npx tsc --noEmit` 무에러
+- [x] `npm run lint` clean
+- [x] 백엔드(`LLM_MODE=mock`) + 프론트 dev 동시 기동 성공
+- [x] 인터랙션 라우트 3개(`/ep1/scene/{5,6,7}`) 모두 200
+- [x] 백엔드 mock SSE 3종 라이브 검증: `POST /api/v1/respond` (메시지+history 반영), `POST /api/v1/respond/auto`, `POST /api/v1/respond/farewell` 모두 metadata + delta 정상 스트리밍
+- [x] SSR HTML 검증: `/ep1/scene/5`에 `vn-interaction` + `vn-illust--interaction` + `vn-msgbox` + `vn-input` + "발화하기" + "침묵" + "그와 함께 걷는다" + `screen_05`. `/ep1/scene/{6,7}`에 각각의 전환 라벨 + 일러스트 매핑 확인
+- [ ] *대화 흐름* (자동 발화 → 학습자 입력 → 응답 스트리밍 → 화면 전환): SSR로 검증 불가 — 브라우저 라이브 점검 필요
+
+#### 알려진 한계
+- **#7 작별 후 학습자 마지막 응답 1회 폴리시 미반영**: VN_UI_POLICY §3.10은 *"학습자 마지막 응답 1회 가능 (선택)"*을 명시하지만, 현재 구현은 farewell 발화 후 `[엔딩으로 →]` 라벨로 전환되어 학습자가 자유롭게 send/silent 추가 후 클릭하는 흐름. 대체로 충족하지만 *어느 시점에 학습자가 멈춰야 하는지* UI 가이드는 없음.
+- **수동 스크롤 일시정지 미구현**: 자동 스크롤만 동작. 학습자가 위로 스크롤해 이전 메시지 보는 중에도 새 응답 도착 시 자동으로 하단 이동. 시연에서 발생 가능성 낮으니 P1.
+- **3초 응답 지연 인디케이터 미구현**: §3.5의 *"응답 지연 > 3초: italic 작은 …"*은 *전용 booting 인디케이터*이지만 현재는 빈 streaming 메시지를 항상 `…`로 표시 (스트리밍 시작 후 첫 delta까지). 시각적으로 동일 효과지만 booting을 명시적으로 표시하지 않음.
+- **자동 발화 페이드 시퀀스 단순화**: 화자명 페이드인 280~320ms는 단순 100ms 정적으로 대체. 차라투스트라 메시지 박스가 booting 단계부터 마운트되어 화자명만 먼저 등장하는 효과는 자연스럽지 않음.
+- **#7 일러스트 alt가 학습자 등장 표현 부족**: "언덕 위 두 인물과 멀리 보이는 시장의 황혼" — Ep 1 #5/#6/#7은 학습자(두 번째 인물)가 함께 있다는 게 핵심. 일러스트 자체는 OK.
+
+#### 다음 Phase
+- **Phase 7: 해설 패널 + 모달 + 토스트 + 세이브 시스템**
+- 입력: `VN_UI_POLICY.md` §4 (해설 모드) + §6 (세이브) + 기존 `EXPLAIN_RESPONSES` mock 데이터
+- 핵심 작업: `HaeseolPanel.tsx` (우측 슬라이드 50%) + `Modal.tsx` (공용) + `data/haeseol/` (정적 풀이 손글씨) + `useExplain.ts` + `useSave.ts` 훅 + `/save` 엔드포인트 통합 + `[해설]` 버튼 진짜 동작
+- 사용자 확인 필요: 정적 풀이 손글씨 텍스트 (황철희 직접 작성 — 미리 받아야 진행)
 
 ### 2026-05-01 — Phase 5 완료 (책 삽화 레이아웃 + 일러스트 통합)
 
@@ -271,7 +312,7 @@
 | 3 | 프론트 라우팅 + Redux 골격 | ✅ 완료 (2026-05-01) |
 | 4 | 정적 나레이션 컴포넌트 + 텍스트 | ✅ 완료 (2026-05-01) |
 | 5 | 책 삽화 레이아웃 + 페이드 + 일러스트 통합 | ✅ 완료 (2026-05-01) |
-| 6 | 인터랙션 컴포넌트 | ⏳ 대기 |
+| 6 | 인터랙션 컴포넌트 | ✅ 완료 (2026-05-01) |
 | 7 | 해설 패널 + 모달 + 토스트 + 세이브 | ⏳ 대기 |
 | 8 | Ep 2 통합 + transition + 시연 대본 | ⏳ 대기 |
 | 9 | (별도) vLLM 실제 연결 + RAG + 요약 sLLM | 🔵 Phase 8 후 |
@@ -299,6 +340,15 @@
 - `POST /save`는 내부에서 `SummaryClient`를 동기 consume하여 summary 생성 후 upsert. 별도 summary 인자 받지 않음.
 - DB는 PostgreSQL 유지 (기존 셋업 그대로). VN_AGENTS.md §1의 SQLite 표기는 README 정정 시점에 처리.
 - 신규 단위/통합 테스트 미작성 (VN_AGENTS.md §3.5 *"단위 테스트 작성 시간 낭비"*). curl + smoke import로 종료 조건 충족.
+
+### Phase 6
+- **#5 첫 발화는 고정 텍스트 + 시뮬 스트리밍** 채택 (EP1_TEXT_AND_PROMPTS §화면 #5 *"안정성"* 명시). 32ms/char로 sLLM 응답과 동일한 체감. sLLM 호출 X.
+- **자동 발화 진입 지연 800ms** (페이드 600ms + 정적 200ms, VN_UI_POLICY §3.8). 화자명 페이드인 280~320ms 단계는 단순화로 100ms 정적 대체.
+- **자동 스크롤 항상 동작** (수동 스크롤 일시정지 P1). 단순 `scrollTop = scrollHeight`. 시연 환경에서 학습자가 직접 스크롤할 가능성 낮음.
+- **booting 인디케이터 = 빈 streaming 메시지를 italic `…`로 렌더** (스트리밍 시작 후 첫 delta까지). 별도 *3초 지연 검출* 로직 안 만듦 — 시각 결과 동일.
+- **farewell 흐름 단순화**: `[작별을 고한다 →]` 클릭 → `ix.farewell()` → 라벨이 `[엔딩으로 →]`로 전환 → 학습자 자유 추가 send/silent → 다시 클릭 시 `onComplete`. *학습자 마지막 응답 1회 (선택)* §3.10 폴리시를 *"farewell 후 자유롭게 인터랙션 + 명시적 클릭으로 종료"*로 해석.
+- **InteractionScreen이 farewell 상태 자체 관리**, 페이지는 `onComplete`만 받음. 페이지가 farewell 흐름을 알 필요 없음.
+- **dialogueSlice의 `addUserMessage` content가 침묵 시 "…"** + isSilent=true. 백엔드 history 전송 시 ASCII "..."로 매핑 (mock의 silent 처리와 호환).
 
 ### Phase 5
 - **사용자가 일러스트 8장을 직접 제작**해서 일러스트 placeholder 단계 스킵. PNG 원본 2624×1632(합 ~100MB)를 Pillow로 1600×1000 WebP @ q88 변환 → 합 ~5.8MB (94% 절감). PNG는 `.gitignore`로 추적 제외, WebP만 커밋.
@@ -438,3 +488,4 @@ curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000/ep2/ending
 - 2026-05-01: Phase 3 완료 라인 추가 (프론트 라우팅 8개 + Redux 5 slices + API 클라이언트 + CSS 페이드).
 - 2026-05-01: Phase 4 완료 라인 추가 (정적 나레이션 컴포넌트 3종 + ToastHost + 텍스트 데이터 4파일 + 키보드 단축키).
 - 2026-05-01: Phase 5 완료 라인 추가 (16:10 책 삽화 레이아웃 + 사용자 제작 일러스트 8장 WebP 통합 + #4→#5 800ms slowFade wiring).
+- 2026-05-01: Phase 6 완료 라인 추가 (인터랙션 컴포넌트 4종 + useInteraction 훅 + Mock SSE 통합 + farewell 흐름).
