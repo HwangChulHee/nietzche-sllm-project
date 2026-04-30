@@ -107,7 +107,8 @@ nietzsche-project/
 
 ## 작업 진입점
 
-**새 LLM 세션은 반드시 `docs/vn/VN_AGENTS.md`부터 읽을 것.** 30초 안에 컨텍스트를 잡고, 행동 규약(§3)을 내재화한 뒤, 라우팅 표(§5)에 따라 필요한 문서만 lazy load 하도록 설계됨.
+- **Claude Code (CLI 환경, 파일 시스템 접근 가능)**: `docs/vn/VN_AGENTS.md`부터 읽기. 30초 안에 컨텍스트 + 행동 규약(§3) + 라우팅 표(§5).
+- **웹 Claude / ChatGPT 등 외부 LLM 세션 (파일 업로드 방식)**: `docs/REPO_OVERVIEW.md` 한 파일이 전체 인덱스. 시나리오별로 추가 파일을 골라 함께 업로드.
 
 진행 상태는 `docs/vn/VN_PROGRESS.md` 참조.
 
