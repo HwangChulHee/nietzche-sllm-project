@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { BackButton } from "./BackButton";
 import { Frame } from "./Frame";
 import { IllustrationLayer } from "./IllustrationLayer";
 
@@ -16,16 +17,25 @@ type Props = {
   illustration: string;
   alt: string;
   actions: EndingAction[];
+  onBack: () => void;
 };
 
 type Stage = "illust_only" | "text_fading_in" | "text_idle" | "menu_fading_in" | "menu_idle";
 
 const ILLUST_HOLD_MS = 5000;
-const TEXT_FADE_MS = 600;
+const TEXT_FADE_MS = 900;
 const MENU_DELAY_MS = 3000;
-const MENU_FADE_MS = 600;
+const MENU_FADE_MS = 900;
 
-export function EndingCard({ episode, title, body, illustration, alt, actions }: Props) {
+export function EndingCard({
+  episode,
+  title,
+  body,
+  illustration,
+  alt,
+  actions,
+  onBack,
+}: Props) {
   const [stage, setStage] = useState<Stage>("illust_only");
 
   useEffect(() => {
@@ -64,6 +74,8 @@ export function EndingCard({ episode, title, body, illustration, alt, actions }:
           priority
         />
         <div className="vn-ending__veil" aria-hidden="true" />
+
+        <BackButton onClick={onBack} disabled={!menuVisible} />
 
         <div
           className={`vn-ending__text ${textVisible ? "vn-ending__text--visible" : ""}`}

@@ -33,9 +33,9 @@ import type { InteractionScene } from "@/data/scenes/types";
  *   자체 트리거(VN_PROGRESS Phase 6 한계 참조).
  */
 
-const ENTRY_DELAY_MS = 800;
-const SPEAKER_FADE_MS = 100;
-const FIXED_CHAR_INTERVAL_MS = 32;
+const ENTRY_DELAY_MS = 1600;
+const SPEAKER_FADE_MS = 260;
+const FIXED_CHAR_INTERVAL_MS = 80;
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 

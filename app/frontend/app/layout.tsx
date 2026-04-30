@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import { ToastHost } from "@/components/vn/ToastHost";
+import { TransitionOverlay } from "@/components/vn/TransitionOverlay";
 import { Providers } from "./providers";
 import { VnFrame } from "./vn-frame";
 import "./globals.css";
@@ -18,6 +19,7 @@ export default function RootLayout({
       <body>
         <Providers>
           <VnFrame>{children}</VnFrame>
+          <TransitionOverlay />
           <ToastHost />
         </Providers>
       </body>

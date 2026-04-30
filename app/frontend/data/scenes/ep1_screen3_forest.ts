@@ -24,7 +24,7 @@ export const ep1Screen3Forest: NarrationScene = {
     },
     {
       kind: "quote",
-      text: "“나는 인간을 사랑한다.”",
+      text: "“**나는 인간을 사랑한다.**”",
     },
     {
       kind: "narration",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { BackButton } from "./BackButton";
 import { Frame } from "./Frame";
 import { IllustrationLayer } from "./IllustrationLayer";
 import { InputArea } from "./InputArea";
@@ -11,6 +12,7 @@ import type { InteractionScene } from "@/data/scenes/types";
 type Props = {
   scene: InteractionScene;
   onComplete: () => void;
+  onBack: () => void;
 };
 
 /**
@@ -23,7 +25,7 @@ type Props = {
  *     → 학습자는 send/silent 한 번 더 가능 (선택)
  *     → 다시 클릭 시 onComplete (엔딩 카드 라우트로)
  */
-export function InteractionScreen({ scene, onComplete }: Props) {
+export function InteractionScreen({ scene, onComplete, onBack }: Props) {
   const ix = useInteraction(scene);
   const [farewellTriggered, setFarewellTriggered] = useState(false);
 
@@ -52,6 +54,8 @@ export function InteractionScreen({ scene, onComplete }: Props) {
           mode="interaction"
           priority
         />
+
+        <BackButton onClick={onBack} disabled={ix.streamingState !== "idle"} />
 
         <div className="vn-interaction__lower">
           <MessageBox messages={ix.messages} />

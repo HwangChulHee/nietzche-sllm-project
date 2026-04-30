@@ -24,7 +24,7 @@ export const ep1Screen2Summit: NarrationScene = {
     },
     {
       kind: "narration",
-      text: "그는 다시 인간이 되어야 한다.\n산을 내려가야 한다.",
+      text: "그는 다시 인간이 되어야 한다.\n**산을 내려가야 한다.**",
     },
   ],
 };

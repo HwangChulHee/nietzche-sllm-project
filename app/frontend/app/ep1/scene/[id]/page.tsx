@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useEffect } from "react";
 
 import { InteractionScreen } from "@/components/vn/InteractionScreen";
@@ -14,6 +14,7 @@ import { ep1Screen6Walking } from "@/data/scenes/ep1_screen6_walking";
 import { ep1Screen7MarketDistant } from "@/data/scenes/ep1_screen7_market_distant";
 import type { InteractionScene, NarrationScene } from "@/data/scenes/types";
 import { useAppDispatch } from "@/lib/hooks/useAppDispatch";
+import { useNavigate } from "@/lib/hooks/useNavigate";
 import { enterScene, type Mode } from "@/lib/store/episodeSlice";
 
 const NARRATION_SCENES: Record<string, NarrationScene> = {
@@ -37,11 +38,20 @@ const NEXT: Record<string, string> = {
   "7": "/ep1/ending",
 };
 
+const PREV: Record<string, string> = {
+  "2": "/",
+  "3": "/ep1/scene/2",
+  "4": "/ep1/scene/3",
+  "5": "/ep1/scene/4",
+  "6": "/ep1/scene/5",
+  "7": "/ep1/scene/6",
+};
+
 export default function Ep1ScenePage() {
   const params = useParams<{ id: string }>();
   const id = params.id;
   const dispatch = useAppDispatch();
-  const router = useRouter();
+  const navigate = useNavigate();
 
   const narration = NARRATION_SCENES[id];
   const interaction = INTERACTION_SCENES[id];
@@ -61,7 +71,8 @@ export default function Ep1ScenePage() {
         enableHaeseol={narration.enableHaeseol}
         illustration={narration.illustration}
         alt={narration.alt}
-        onComplete={() => router.push(NEXT[id])}
+        onComplete={() => navigate(NEXT[id])}
+        onBack={() => navigate(PREV[id])}
       />
     );
   }
@@ -70,7 +81,8 @@ export default function Ep1ScenePage() {
     return (
       <InteractionScreen
         scene={interaction}
-        onComplete={() => router.push(NEXT[id])}
+        onComplete={() => navigate(NEXT[id])}
+        onBack={() => navigate(PREV[id])}
       />
     );
   }

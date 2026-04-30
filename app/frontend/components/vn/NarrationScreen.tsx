@@ -1,13 +1,32 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { BackButton } from "./BackButton";
 import { Frame } from "./Frame";
 import { IllustrationLayer } from "./IllustrationLayer";
 import type { Paragraph } from "@/data/scenes/types";
 import { showToast } from "@/lib/store/uiSlice";
 import { useAppDispatch } from "@/lib/hooks/useAppDispatch";
 
-const FADE_MS = 290;
+const FADE_MS = 600;
+
+/**
+ * 본문 안 `**...**` 마크다운식 강조 토큰을 <em class="vn-emph">로 변환.
+ * 강조 부분 외 텍스트는 그대로 노출. (multiline / 빈 마커 등 edge case는
+ * 작성자 책임 — VN 텍스트는 사람이 직접 작성하므로 단순 split로 충분.)
+ */
+function renderInline(text: string): React.ReactNode[] {
+  return text.split(/(\*\*[^*]+\*\*)/g).map((seg, i) => {
+    if (seg.startsWith("**") && seg.endsWith("**")) {
+      return (
+        <em key={i} className="vn-emph">
+          {seg.slice(2, -2)}
+        </em>
+      );
+    }
+    return <span key={i}>{seg}</span>;
+  });
+}
 
 type Props = {
   paragraphs: Paragraph[];
@@ -15,6 +34,7 @@ type Props = {
   illustration: string;
   alt: string;
   onComplete: () => void;
+  onBack: () => void;
 };
 
 type Phase = "in" | "idle" | "out" | "exit";
@@ -25,6 +45,7 @@ export function NarrationScreen({
   illustration,
   alt,
   onComplete,
+  onBack,
 }: Props) {
   const dispatch = useAppDispatch();
   const [index, setIndex] = useState(0);
@@ -51,6 +72,20 @@ export function NarrationScreen({
       setPhase("in");
     }, FADE_MS);
   }, [phase, index, paragraphs.length, onComplete]);
+
+  /** 첫 단락이면 이전 화면, 아니면 한 단락 전. */
+  const goBack = useCallback(() => {
+    if (phase !== "idle" || completedRef.current) return;
+    if (index === 0) {
+      onBack();
+      return;
+    }
+    setPhase("out");
+    window.setTimeout(() => {
+      setIndex((i) => Math.max(0, i - 1));
+      setPhase("in");
+    }, FADE_MS);
+  }, [phase, index, onBack]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -88,13 +123,15 @@ export function NarrationScreen({
           priority
         />
 
+        <BackButton onClick={goBack} disabled={inFlight} />
+
         <div className="vn-narration__textbox">
           <p
             className={`vn-narration__text ${
               para.kind === "quote" ? "vn-narration__text--quote" : ""
             } ${fading ? "vn-narration__text--fading" : ""}`}
           >
-            {para.text}
+            {renderInline(para.text)}
           </p>
           <span
             className={`vn-narration__indicator ${

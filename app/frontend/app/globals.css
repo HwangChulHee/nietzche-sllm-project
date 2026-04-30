@@ -50,12 +50,12 @@ body {
   background: var(--vn-bg);
   position: relative;
   overflow: hidden;
-  animation: vn-fade-in 600ms ease forwards;
+  animation: vn-fade-in 900ms ease forwards;
 }
 
-/* #4 → #5 분위기 전환점은 800ms (VN_UI_POLICY §2.4) */
+/* #4 → #5 분위기 전환점은 더 길게 (VN_UI_POLICY §2.4) */
 .vn-page--slow {
-  animation-duration: 800ms;
+  animation-duration: 1300ms;
 }
 
 @keyframes vn-fade-in {
@@ -178,13 +178,13 @@ body {
 }
 
 .vn-narration__text {
-  max-width: 720px;
-  font-size: 18px;
+  max-width: 760px;
+  font-size: 22px;
   line-height: 1.9;
   color: var(--vn-ink);
   text-align: left;
   white-space: pre-line;
-  transition: opacity 290ms ease;
+  transition: opacity 600ms ease;
   opacity: 1;
 }
 
@@ -198,13 +198,24 @@ body {
   opacity: 0;
 }
 
+/* 본문 안 강조 (`**...**` 마커) — 책 강조 양식: 진한 잉크 + 굵게 +
+   폰트 살짝 큼. quote 단락(italic) 안에서는 italic 해제(직립체)로
+   시각 분리. */
+.vn-emph {
+  color: #0e0a06;
+  font-weight: 600;
+  font-size: 1.08em;
+  letter-spacing: 0.03em;
+  font-style: normal;
+}
+
 .vn-narration__indicator {
   position: absolute;
   right: 32px;
   bottom: 18px;
-  font-size: 14px;
+  font-size: 16px;
   color: var(--vn-ink-light);
-  animation: vn-indicator-blink 1.4s ease-in-out infinite;
+  animation: vn-indicator-blink 2s ease-in-out infinite;
 }
 
 .vn-narration__indicator--hidden {
@@ -221,7 +232,7 @@ body {
   left: 24px;
   bottom: 18px;
   font-family: var(--vn-font-serif);
-  font-size: 13px;
+  font-size: 15px;
   letter-spacing: 0.06em;
   color: var(--vn-ink);
   background: var(--vn-bg);
@@ -279,27 +290,28 @@ body {
 }
 
 .vn-ending__episode {
-  font-size: 14px;
+  font-size: 16px;
   letter-spacing: 0.32em;
   color: var(--vn-ink-light);
-  margin-bottom: 20px;
+  margin-bottom: 22px;
 }
 
 .vn-ending__title {
-  font-size: 40px;
+  font-size: 46px;
   letter-spacing: 0.4em;
   font-weight: 400;
-  margin-bottom: 24px;
+  margin-bottom: 26px;
 }
 
 .vn-ending__divider {
   color: var(--vn-ink-muted);
   margin-bottom: 32px;
   letter-spacing: 0.1em;
+  font-size: 16px;
 }
 
 .vn-ending__body p {
-  font-size: 17px;
+  font-size: 22px;
   line-height: 1.9;
   color: var(--vn-ink);
 }
@@ -322,7 +334,7 @@ body {
 
 .vn-ending__action {
   font-family: var(--vn-font-serif);
-  font-size: 14px;
+  font-size: 16px;
   letter-spacing: 0.08em;
   color: var(--vn-ink);
   background: rgba(245, 236, 217, 0.85);
@@ -376,15 +388,15 @@ body {
 }
 
 .vn-title__main {
-  font-size: 56px;
+  font-size: 64px;
   letter-spacing: 0.32em;
   font-weight: 400;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
   text-shadow: 0 0 14px rgba(245, 236, 217, 0.7);
 }
 
 .vn-title__sub {
-  font-size: 14px;
+  font-size: 16px;
   letter-spacing: 0.3em;
   color: var(--vn-ink-light);
   margin-bottom: 56px;
@@ -399,13 +411,13 @@ body {
 
 .vn-title__action {
   font-family: var(--vn-font-serif);
-  font-size: 16px;
+  font-size: 17px;
   letter-spacing: 0.2em;
   color: var(--vn-ink);
   background: rgba(245, 236, 217, 0.78);
   border: 1px solid var(--vn-ink-muted);
-  padding: 10px 32px;
-  min-width: 220px;
+  padding: 12px 36px;
+  min-width: 240px;
   cursor: pointer;
   transition: background 200ms ease;
 }
@@ -420,17 +432,17 @@ body {
 }
 
 .vn-title__quote {
-  max-width: 540px;
+  max-width: 580px;
   font-style: italic;
   color: var(--vn-ink-light);
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.8;
   text-shadow: 0 0 10px rgba(245, 236, 217, 0.6);
 }
 
 .vn-title__quote footer {
-  margin-top: 8px;
-  font-size: 12px;
+  margin-top: 10px;
+  font-size: 13px;
   color: var(--vn-ink-muted);
   font-style: normal;
 }
@@ -500,7 +512,7 @@ body {
 }
 
 .vn-msgbox__speaker {
-  font-size: 11px;
+  font-size: 13px;
   letter-spacing: 0.18em;
 }
 
@@ -513,8 +525,8 @@ body {
 }
 
 .vn-msgbox__body {
-  font-size: 15px;
-  line-height: 1.7;
+  font-size: 17px;
+  line-height: 1.75;
   white-space: pre-wrap;
   color: var(--vn-ink);
 }
@@ -550,16 +562,16 @@ body {
 
 .vn-input__textarea {
   width: 100%;
-  min-height: 36px;
-  max-height: 120px;
+  min-height: 40px;
+  max-height: 132px;
   resize: none;
   font-family: var(--vn-font-serif);
-  font-size: 14px;
+  font-size: 16px;
   line-height: 1.6;
   color: var(--vn-ink);
   background: var(--vn-bg);
   border: 1px solid var(--vn-ink-muted);
-  padding: 8px 70px 8px 12px;
+  padding: 10px 78px 10px 14px;
   outline: none;
   transition: border-color 150ms ease;
 }
@@ -575,9 +587,9 @@ body {
 
 .vn-input__counter {
   position: absolute;
-  right: 10px;
-  bottom: 10px;
-  font-size: 11px;
+  right: 12px;
+  bottom: 12px;
+  font-size: 12px;
   color: var(--vn-ink-muted);
   letter-spacing: 0.04em;
   pointer-events: none;
@@ -605,12 +617,12 @@ body {
 .vn-input__btn,
 .vn-input__transition {
   font-family: var(--vn-font-serif);
-  font-size: 13px;
+  font-size: 15px;
   letter-spacing: 0.06em;
   color: var(--vn-ink);
   background: transparent;
   border: 1px solid var(--vn-ink-muted);
-  padding: 7px 16px;
+  padding: 9px 20px;
   cursor: pointer;
   transition: background 200ms ease, color 200ms ease;
 }
@@ -630,6 +642,52 @@ body {
   border-color: var(--vn-bg-darker);
 }
 
+/* ─── Back Button (좌상단, 모든 화면 공통) ────────── */
+
+.vn-back {
+  position: absolute;
+  top: 18px;
+  left: 24px;
+  font-family: var(--vn-font-serif);
+  font-size: 14px;
+  letter-spacing: 0.06em;
+  color: var(--vn-ink-light);
+  background: rgba(245, 236, 217, 0.7);
+  border: 1px solid transparent;
+  padding: 7px 14px;
+  cursor: pointer;
+  z-index: 3;
+  transition: color 200ms ease, background 200ms ease, border-color 200ms ease;
+}
+
+.vn-back:hover:not(:disabled) {
+  color: var(--vn-ink);
+  background: var(--vn-bg-darker);
+  border-color: var(--vn-ink-muted);
+}
+
+.vn-back:disabled {
+  opacity: 0;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* ─── Transition Overlay (라우트 변경 시 검은 페이드) ── */
+
+.vn-transition {
+  position: fixed;
+  inset: 0;
+  background: var(--vn-letterbox);
+  pointer-events: none;
+  z-index: 100;
+  opacity: 0;
+  transition: opacity 600ms ease;
+}
+
+.vn-transition--opaque {
+  opacity: 1;
+}
+
 /* ─── Toast ──────────────────────────────────────── */
 
 .vn-toast {
@@ -640,9 +698,9 @@ body {
   background: var(--vn-ink);
   color: var(--vn-bg);
   font-family: var(--vn-font-serif);
-  font-size: 13px;
+  font-size: 15px;
   letter-spacing: 0.06em;
-  padding: 12px 24px;
+  padding: 14px 28px;
   z-index: 10;
   animation: vn-toast-in 200ms ease forwards;
 }

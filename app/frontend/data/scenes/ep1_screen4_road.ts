@@ -13,7 +13,7 @@ export const ep1Screen4Road: NarrationScene = {
     },
     {
       kind: "quote",
-      text: "“이럴 수가 있는가.\n저 늙은 성자는 숲 속에서\n신이 죽었다는 소식을 아직 듣지 못했구나.”",
+      text: "“이럴 수가 있는가.\n저 늙은 성자는 숲 속에서\n**신이 죽었다는 소식**을 아직 듣지 못했구나.”",
     },
     {
       kind: "narration",
