@@ -22,18 +22,29 @@ export interface SSECallbacks {
   onError?: (message: string) => void;
 }
 
+function isAbortError(e: unknown): boolean {
+  return e instanceof Error && (e.name === "AbortError" || e.name === "DOMException");
+}
+
 export async function streamSSE(
   path: string,
   body: unknown,
   cb: SSECallbacks,
   signal?: AbortSignal,
 ): Promise<void> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    signal,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal,
+    });
+  } catch (e) {
+    if (isAbortError(e)) return; // 화면 전환 등으로 인한 취소는 silent
+    cb.onError?.(e instanceof Error ? e.message : "fetch failed");
+    return;
+  }
 
   if (!res.ok || !res.body) {
     cb.onError?.(`HTTP ${res.status}`);
@@ -44,37 +55,42 @@ export async function streamSSE(
   const decoder = new TextDecoder();
   let buffer = "";
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
 
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() ?? "";
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
 
-    for (const line of lines) {
-      if (!line.startsWith("data: ")) continue;
-      let event: { type: string; [k: string]: unknown };
-      try {
-        event = JSON.parse(line.slice(6));
-      } catch {
-        continue;
-      }
-      switch (event.type) {
-        case "metadata":
-          cb.onMetadata?.(event as SSEMetadata);
-          break;
-        case "delta":
-          cb.onDelta(String(event.content ?? ""));
-          break;
-        case "done":
-          cb.onDone?.();
-          break;
-        case "error":
-          cb.onError?.(String(event.message ?? "unknown error"));
-          break;
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        let event: { type: string; [k: string]: unknown };
+        try {
+          event = JSON.parse(line.slice(6));
+        } catch {
+          continue;
+        }
+        switch (event.type) {
+          case "metadata":
+            cb.onMetadata?.(event as SSEMetadata);
+            break;
+          case "delta":
+            cb.onDelta(String(event.content ?? ""));
+            break;
+          case "done":
+            cb.onDone?.();
+            break;
+          case "error":
+            cb.onError?.(String(event.message ?? "unknown error"));
+            break;
+        }
       }
     }
+  } catch (e) {
+    if (isAbortError(e)) return;
+    cb.onError?.(e instanceof Error ? e.message : "stream error");
   }
 }
 

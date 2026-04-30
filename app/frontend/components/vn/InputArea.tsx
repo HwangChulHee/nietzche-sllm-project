@@ -14,6 +14,7 @@ type Props = {
   onSend: (text: string) => void;
   onSilent: () => void;
   onTransition: () => void;
+  onBack: () => void;
 };
 
 export function InputArea({
@@ -23,6 +24,7 @@ export function InputArea({
   onSend,
   onSilent,
   onTransition,
+  onBack,
 }: Props) {
   const [value, setValue] = useState("");
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -75,6 +77,14 @@ export function InputArea({
       </div>
       <div className="vn-input__actions">
         <div className="vn-input__actions-left">
+          <button
+            type="button"
+            className="vn-input__btn vn-input__btn--back"
+            onClick={onBack}
+            disabled={inFlight}
+          >
+            ← 뒤로
+          </button>
           <button
             type="button"
             className="vn-input__btn vn-input__btn--primary"

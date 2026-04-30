@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BackButton } from "./BackButton";
 import { Frame } from "./Frame";
 import { IllustrationLayer } from "./IllustrationLayer";
 import { InputArea } from "./InputArea";
@@ -107,11 +106,6 @@ export function InteractionScreen({
           priority
         />
 
-        <BackButton
-          onClick={onBack}
-          disabled={ix.streamingState !== "idle"}
-        />
-
         <button
           type="button"
           className="vn-save"
@@ -130,6 +124,7 @@ export function InteractionScreen({
             onSend={ix.send}
             onSilent={ix.silent}
             onTransition={handleTransition}
+            onBack={onBack}
           />
         </div>
 

@@ -612,6 +612,25 @@ body {
 .vn-input__actions-left {
   display: flex;
   gap: 8px;
+  align-items: center;
+}
+
+/* 액션 행 좌측 끝의 [← 뒤로]는 *화면 행위*. 우측 옅은 보더로 *대화 행위*
+   ([발화하기]/[침묵])와 시각 분리. */
+.vn-input__btn--back {
+  margin-right: 6px;
+  padding-right: 18px;
+  border-right: 1px solid var(--vn-ink-muted);
+  border-top: none;
+  border-bottom: none;
+  border-left: none;
+  background: transparent;
+  color: var(--vn-ink-light);
+}
+
+.vn-input__btn--back:hover:not(:disabled) {
+  background: transparent;
+  color: var(--vn-ink);
 }
 
 .vn-input__btn,
@@ -672,6 +691,9 @@ body {
   opacity: 0.35;
   cursor: not-allowed;
 }
+
+/* 인터랙션 화면에선 BackButton을 InputArea 액션 행에 통합하므로
+   absolute 위치 BackButton은 마운트 안 함 (InteractionScreen 참조). */
 
 /* ─── Transition Ep2 (Ep 1 → Ep 2 카운드오버) ────── */
 
