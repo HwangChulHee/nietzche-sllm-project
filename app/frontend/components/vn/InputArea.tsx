@@ -11,6 +11,7 @@ type Props = {
   streamingState: StreamingState;
   canTransition: boolean;
   transitionLabel: string;
+  hint?: string | null;
   onSend: (text: string) => void;
   onSilent: () => void;
   onTransition: () => void;
@@ -21,6 +22,7 @@ export function InputArea({
   streamingState,
   canTransition,
   transitionLabel,
+  hint,
   onSend,
   onSilent,
   onTransition,
@@ -60,6 +62,7 @@ export function InputArea({
 
   return (
     <div className="vn-input">
+      {hint && <div className="vn-input__hint">{hint}</div>}
       <div className="vn-input__row">
         <textarea
           ref={taRef}

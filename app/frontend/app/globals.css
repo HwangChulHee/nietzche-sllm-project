@@ -537,12 +537,27 @@ body {
 
 .vn-msgbox__body--silent {
   font-style: italic;
-  color: var(--vn-ink-muted) !important;
+  color: var(--vn-ink-light) !important;
 }
 
-.vn-msgbox__body--waiting {
+/* 빈 awaiting bubble — 본문 자리는 비우고 인디케이터만 등장 */
+.vn-msgbox__body--awaiting {
+  min-height: 1.75em; /* 본문 한 줄 자리 확보 (레이아웃 점프 방지) */
+}
+
+/* 응답 지연 > 3초 인디케이터 (정책 §3.5).
+   booting/빈 streaming 시작 후 3초 경과 시 페이드인.
+   delta 도착·완료 시 즉시 해제. */
+.vn-msgbox__delay-hint {
   font-style: italic;
-  color: var(--vn-ink-light);
+  font-size: 14px;
+  color: var(--vn-ink-muted);
+  opacity: 0;
+  transition: opacity 400ms ease;
+}
+
+.vn-msgbox__delay-hint--visible {
+  opacity: 1;
 }
 
 /* ─── Input Area (#5~#7) ─────────────────────────── */
@@ -554,6 +569,14 @@ body {
   flex-direction: column;
   gap: 10px;
   background: var(--vn-bg);
+}
+
+/* 작별 단계 안내 (정책 §3.10) — italic 옅은 잉크 */
+.vn-input__hint {
+  font-style: italic;
+  font-size: 13px;
+  color: var(--vn-ink-light);
+  letter-spacing: 0.02em;
 }
 
 .vn-input__row {

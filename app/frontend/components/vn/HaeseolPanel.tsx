@@ -90,7 +90,7 @@ export function HaeseolPanel({ screenId }: Props) {
             ))}
 
             {ix.error && (
-              <p className="vn-haeseol__error">길이 잠시 끊겼습니다. — {ix.error}</p>
+              <p className="vn-haeseol__error">길이 잠시 끊겼습니다.</p>
             )}
           </>
         ) : (

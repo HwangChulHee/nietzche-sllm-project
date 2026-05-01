@@ -54,7 +54,7 @@ export default function TitlePage() {
         onExit={() =>
           dispatch(
             showToast({
-              message: "[종료]는 패키징(Tauri) 단계에서 동작합니다.",
+              message: "[종료]는 데스크톱 앱 버전에서 동작합니다.",
               durationMs: 1800,
             }),
           )

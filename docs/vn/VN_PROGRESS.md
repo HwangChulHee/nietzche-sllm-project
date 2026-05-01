@@ -8,13 +8,53 @@
 ## 현재 상태 요약
 
 **최종 업데이트**: 2026-05-01
-**현재 Phase**: 8 완료 / Phase 9 대기 (vLLM 실제 연결 + RAG)
+**현재 Phase**: 8 완료 + UI/UX 폴리시 패스 / Phase 9 대기 (vLLM 실제 연결 + RAG)
 **상태**: 🟢 **Ep 1 + Ep 2 풀 사이클 완성**. 타이틀 → Ep 1 (정적 나레이션 #2~#4 + 해설 + 인터랙션 #5~#7 + 저장/불러오기 + 엔딩 #8) → 카운드오버 transition → Ep 2 (정적 나레이션 #1~#3 + 해설 + 인터랙션 #4 + 엔딩) → 타이틀 복귀 모두 Mock 모드로 동작. 시연 대본 작성.
 **모드**: 백엔드 `LLM_MODE=mock`
 
 ---
 
 ## 변경 로그 (최신순)
+
+### 2026-05-01 — Phase 8 폴리시 패스 (UI/UX 정합 + 정책 문서 갱신)
+
+#### 작업
+- **응답 지연 인디케이터** (정책 §3.5 구현): `MessageBox`에 3초 booting 타이머 + `vn-msgbox__delay-hint` (italic 14px / `--vn-ink-muted` / 400ms 페이드). 첫 delta 도착 또는 완료 시 즉시 해제. 정상 응답에서는 노출 X (§5.3 *"검색 중..." 신호 X* 원칙 준수).
+- **빈 awaiting bubble 레이아웃 점프 방지**: `.vn-msgbox__body--awaiting { min-height: 1.75em }` — 본문 한 줄 자리 미리 확보.
+- **#7/Ep 2 #4 작별 단계 안내** (정책 §3.10 구현): `InputArea`에 `hint?: string | null` prop 추가, `inFarewellPhase`일 때 *"마지막 한 마디를 남기거나, 곧장 떠나도 괜찮습니다."* italic 안내. CSS `.vn-input__hint`.
+- **침묵 색상 토큰 정합**: `vn-msgbox__body--silent`가 `--vn-ink-muted` (#b8ad9b) 사용하던 것을 정책 §3.3에 맞춰 `--vn-ink-light` (#6b5f4f, 학습자 일반 발화와 동일)로 통일.
+- **에러 토스트 / 알림 톤 정리**:
+  - `.vn-interaction__error` / `.vn-haeseol__error`에서 백엔드 디버그 details(`— {error.message}`) 제거. 작품 결 *"길이 잠시 끊겼습니다."* 만 노출 (정책 §5.7 명시 추가).
+  - 타이틀 [종료] 토스트 *"패키징(Tauri) 단계에서 동작합니다"* → *"데스크톱 앱 버전에서 동작합니다"* (학습자 친화적, 기술 용어 제거).
+- **VN_UI_POLICY 정책 문서 갱신**: 초기 합의 수치 vs 구현값 차이를 *의도된 디자인 결정*으로 박아둠 (§2.4 페이드 600ms / §3.3 침묵 색상 명시 / §3.5 인디케이터 구현 / §3.8 자동 발화 타이밍 1600/260/80 / §3.10 작별 안내 / §5.7 에러 details 금지 / §6.5 transition 시퀀스 200+600+3000ms). §11 변경 이력에 한 줄 추가.
+
+#### 산출물 — 변경 파일
+| 파일 | 변경 |
+|---|---|
+| `app/frontend/components/vn/MessageBox.tsx` | useAppSelector + 3초 booting 타이머 + delay hint slot |
+| `app/frontend/components/vn/InputArea.tsx` | `hint?` prop 추가, textarea row 위 슬롯 |
+| `app/frontend/components/vn/InteractionScreen.tsx` | inFarewellPhase 시 hint 전달, 에러 details 제거 |
+| `app/frontend/components/vn/HaeseolPanel.tsx` | 에러 details 제거 |
+| `app/frontend/app/page.tsx` | 종료 토스트 문구 학습자 친화적으로 |
+| `app/frontend/app/globals.css` | `.vn-msgbox__delay-hint*`, `.vn-msgbox__body--awaiting`, `.vn-input__hint` 추가, `--silent` 색상 토큰 정정 |
+| `docs/vn/VN_UI_POLICY.md` | §2.4/§3.3/§3.5/§3.8/§3.10/§5.7/§6.5/§11 갱신 |
+
+#### 검증
+- [x] `npx tsc --noEmit` 무에러
+- [x] `npm run lint` clean (초기 `react-hooks/set-state-in-effect` 룰 위반 → cleanup 패턴으로 정정)
+- [x] dev 서버 라이브 + 타이틀/`/ep1/scene/5`/`/ep1/scene/7` SSR 확인 — `vn-interaction`, `vn-msgbox`, `vn-save`, "작별을 고한다" 마운트 정상
+- [ ] **3초 응답 지연 인디케이터 / 작별 안내 / 침묵 색상**의 *시각 확인*은 브라우저 라이브 점검 필요 (SSR로는 booting/farewell 동적 상태 검증 불가)
+
+#### 알려진 한계 / 미해결 (P2 잔존)
+- `/load` 라우트 placeholder 잔존 (타이틀 모달 직접 처리, 라우트 미사용)
+- 모달 백드롭 fixed (frame 외부 letterbox 덮음) — 정책 §6.4 미세 차이, 의도된 결정일 가능성
+- 해설 패널 백드롭 클릭 닫기 미지원 — 모달은 ESC+백드롭, 패널은 ESC만
+- 수동 스크롤 일시정지 미구현 (Phase 6부터 P1 잔여)
+- 모달 포커스 트랩 (Tab 순환) 미구현
+- 토스트 단일 슬롯 (덮어쓰기 방식) — 빠른 연타 시 마지막만 남음
+
+#### 다음 Phase
+- **Phase 9: vLLM 실제 연결 + RAG + 요약 sLLM** (별도 Phase, RunPod 환경 의존, 변경 없음)
 
 ### 2026-05-01 — Phase 8 완료 (Ep 2 통합 + transition + 시연 대본)
 

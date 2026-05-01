@@ -121,6 +121,11 @@ export function InteractionScreen({
             streamingState={ix.streamingState}
             canTransition={transitionEnabled}
             transitionLabel={transitionLabel}
+            hint={
+              inFarewellPhase
+                ? "마지막 한 마디를 남기거나, 곧장 떠나도 괜찮습니다."
+                : null
+            }
             onSend={ix.send}
             onSilent={ix.silent}
             onTransition={handleTransition}
@@ -130,7 +135,7 @@ export function InteractionScreen({
 
         {ix.error && (
           <div className="vn-interaction__error" role="alert">
-            길이 잠시 끊겼습니다. — {ix.error}
+            길이 잠시 끊겼습니다.
           </div>
         )}
 
