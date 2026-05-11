@@ -138,3 +138,8 @@ app/backend/*.db-journal
 # VN 일러스트 — PNG 원본 (수십 MB, WebP만 커밋)
 # =====================
 app/frontend/public/illustrations/*.png
+
+# RAG / vLLM 부산물
+qdrant_storage/
+*.pid
+.venv.broken/
