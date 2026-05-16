@@ -68,7 +68,8 @@ app/
 
 #### 알려진 한계
 
-- **인터랙션 페르소나 sLLM 미연결**: `useInteraction`/`/respond` 계열은 Mock 또는 frontend 자체 처리. Phase 9 잔여.
+- **인터랙션 화면 런타임 깨짐**: `useInteraction`이 ml-backend에 미구현된 `POST /api/v1/respond` / `/respond/auto` / `/respond/farewell`을 그대로 호출 → SSE 에러로 *"길이 잠시 끊겼습니다"* 토스트 노출. `/ep1/scene/{5,6,7}` + `/ep2/scene/4`이 영향. 첫 발화 고정 텍스트(#5)·자동 발화(#6/#7/Ep 2 #4)·작별 발화 모두 동일. 시연 시 인터랙션 부분은 *미동작*. Phase 9 잔여.
+- **세이브/불러오기 미연결**: `useSave`가 `GET/POST/DELETE /api/v1/save`를 호출하나 ml-backend 미구현. 인터랙션 화면 [저장] 클릭 시 *"저장에 실패했습니다"* 토스트. Phase 9 잔여.
 - **요약 sLLM 미연결**: Ep 1 → Ep 2 카운드오버 transition은 시각 시퀀스만, 백그라운드 요약 호출 없음. Phase 9 잔여.
 - **CPU only**: 해설 RAG 1턴당 ~25초 (Gemma 4 E2B Q4_K_M, 윈도우 CPU). GPU 가속 시 단축 가능.
 - **코퍼스 19청크 한정**: TSZ 1부 Prologue만. 확장은 Phase 9 P1.

@@ -1,5 +1,7 @@
 # Backend Architecture — 비주얼 노벨 sLLM 라우팅
 
+> ⚠️ **ARCHIVE**: 이 디렉토리는 폐기 노선. 2026-05-16 통합으로 활성 백엔드는 `../ml-backend/` (Node + Express + llama.cpp + sqlite-vec). 본 문서는 옛 FastAPI 구현의 회고용 보존 자료.
+
 > FastAPI Layered Architecture. 작품 결을 *얇은 sLLM 호출 라우터*로 흘려보내는 구조.
 > 환경변수 토글로 Mock ↔ vLLM 즉시 swap.
 

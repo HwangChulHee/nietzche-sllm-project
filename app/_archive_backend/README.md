@@ -1,5 +1,7 @@
 # Backend — 비주얼 노벨 sLLM 라우팅
 
+> ⚠️ **ARCHIVE**: 이 디렉토리는 폐기 노선. 2026-05-16 통합으로 활성 백엔드는 `../ml-backend/` (Node + Express + llama.cpp + sqlite-vec). 본 문서는 옛 FastAPI 구현의 회고용 보존 자료.
+
 FastAPI 기반 *얇은 sLLM 호출 라우터*. 8개 엔드포인트가 SSE 스트림으로 차라투스트라 발화 / 해설 동적 풀이 / 요약을 흘려보낸다.
 
 **관련 문서**:

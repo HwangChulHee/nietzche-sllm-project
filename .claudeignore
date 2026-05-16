@@ -1,9 +1,6 @@
-cd /workspace/nietzche-sllm-project
-
-cat > .claudeignore << 'EOF'
 # Claude Code 작업 차단 디렉토리/파일
 
-# Track 1 (데이터 파이프라인) — 사용자가 별도 세션에서 작업 중
+# ml/ 데이터 파이프라인 — 비주얼 노벨 작업과 무관 (회고 자산)
 ml/
 
 # 데이터 파일들
@@ -56,7 +53,3 @@ pnpm-lock.yaml
 .env.local
 .env.production
 !.env.example
-EOF
-
-# 확인
-ls -la .claudeignore

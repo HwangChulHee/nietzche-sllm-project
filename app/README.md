@@ -63,14 +63,16 @@ cd app && npm run electron:dev             # Electron만
 | 2 | `/ep1/scene/2` 산 정상 | 정적 나레이션 + [해설] 패널 시연 (실 RAG) |
 | 3 | `/ep1/scene/3` 숲의 성자 | "나는 인간을 사랑한다" |
 | 4 | `/ep1/scene/4` 길로 나섬 | "신이 죽었다는 소식" (분위기 전환점, 800ms 슬로우 페이드) |
-| 5 | `/ep1/scene/5` 만남 | 첫 인터랙션, 고정 발화 + 학습자 발화/[침묵] |
-| 6 | `/ep1/scene/6` 동행 | 자동 발화 (auto sLLM, Mock) |
-| 7 | `/ep1/scene/7` 시장 원경 | [작별을 고한다 →] 흐름 |
+| 5 | `/ep1/scene/5` 만남 | 첫 인터랙션, 고정 발화 + 학습자 발화/[침묵] ⚠️ |
+| 6 | `/ep1/scene/6` 동행 | 자동 발화 ⚠️ |
+| 7 | `/ep1/scene/7` 시장 원경 | [작별을 고한다 →] 흐름 ⚠️ |
 | 8 | `/ep1/ending` 빈 길 | 엔딩 카드 → [Ep 2로 계속] |
 | 9 | `/ep2/transition` | 카운드오버 (검은 + italic 텍스트 + 3초 정적) |
 | 10 | `/ep2/scene/1`~`/3` | 시장 광장 / 위버멘쉬 / 광대 사건 |
-| 11 | `/ep2/scene/4` 학습자 재회 | 두 번째 인터랙션 + 작별 |
+| 11 | `/ep2/scene/4` 학습자 재회 | 두 번째 인터랙션 + 작별 ⚠️ |
 | 12 | `/ep2/ending` | 메뉴 → [타이틀로] 또는 [Ep 3 확장 비전] |
+
+> ⚠️ **인터랙션 화면 현재 런타임 동작**: `/ep1/scene/{5,6,7}`과 `/ep2/scene/4`는 `useInteraction`이 ml-backend에 미구현된 `POST /api/v1/respond` / `/respond/auto` / `/respond/farewell`을 호출 → SSE 에러로 떨어지며 *"길이 잠시 끊겼습니다"* 에러 토스트 노출. 자동 발화·첫 발화 고정 텍스트도 동일하게 미동작. `useSave`의 `/api/v1/save`도 동일. → Phase 9 잔여 (인터랙션 페르소나·요약 sLLM·세이브 ml-backend 통합).
 
 ---
 
