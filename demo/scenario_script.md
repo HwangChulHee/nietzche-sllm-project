@@ -12,22 +12,19 @@
 
 ### 환경 셋업
 
-```bash
-# 1. DB 마이그레이션 적용 (Phase 7 한계 해소)
-cd app/backend
-PYTHONPATH=. poetry run alembic upgrade head
+전제: llama-server 2개(chat :8000 + embed :8001)가 떠 있어야 해설 모드 RAG가 동작.
+자세한 llama-server 기동·모델 파일 위치는 `app/README.md` "전제" 절 참조.
 
-# 2. 백엔드 mock 모드로 기동
-PYTHONPATH=. poetry run uvicorn main:app --port 8000
-
-# 3. 프론트엔드 dev 기동
-cd ../frontend
+```powershell
+# 통합 가동 (ml-backend :3001 + frontend :3000 + Electron 동시)
+cd app
+npm install   # 최초 1회
 npm run dev
 ```
 
 ### 모드 확인
-- `LLM_MODE=mock` (기본). 시연 안정성 우선.
-- 실제 vLLM 연결은 Phase 9 + 별도 RunPod 셋업.
+- 해설 모드: `ml-backend`의 llama.cpp 기반 RAG 라이브. `http://localhost:3001/health`에 `indexed_chunks` 응답.
+- 인터랙션 페르소나 / 요약 sLLM: 미연결 (Phase 9 잔여). 시연은 자동 발화 + 학습자 발화 흐름의 *시각 시퀀스*만.
 
 ### 시연 전 1회 워밍업
 - `/` 타이틀 → [시작] → /ep1/scene/2 → ▼ 인디케이터 보이는지 확인
@@ -165,32 +162,27 @@ npm run dev
 
 - **무엇이 작동했는가**: 작품 결을 살린 정적 나레이션 + 분할 레이아웃 + 인터랙션 자동 발화 + 컨텍스트 보존 컨셉
 - **현재 캡스톤 한계**:
-  - sLLM은 mock 응답 (실제 vLLM 연결은 Phase 9 RunPod 환경)
-  - RAG는 컨셉만 — 실제 인덱스 + HyDE 검색은 별도 작업
+  - 해설 모드는 llama.cpp 기반 RAG 실 연결 (2026-05-16 통합), 인터랙션 페르소나 / 요약 sLLM은 Phase 9 잔여
+  - RAG 코퍼스는 TSZ 1부 Prologue 19청크 한정 (확장은 P1)
   - 컨텍스트 보존(Ep 1 → Ep 2 #4 주입)은 시각만, 실제 백엔드 주입은 Phase 9
   - Ep 2 일러스트 4장 + 엔딩 1장 — *Ep 1 일러스트 임시 재사용*. 본격 일러스트는 별도 작업.
-  - 디바이스/패키징(Tauri)는 P2
+  - 패키징은 Electron 셸로 통합 (`cd app && npm run dev`)
 - **확장 비전 (Ep 3~22)**: 별도 슬라이드. 본 캡스톤은 *가능성 입증*에 한정.
 
 ---
 
-## 5. 백엔드 모드 토글 (참고)
+## 5. 백엔드 구성 (참고)
 
-- **Mock 모드** (`LLM_MODE=mock`, 기본): 시연 안정성. 모든 sLLM 응답이 미리 짠 텍스트 풀에서 스트리밍.
-- **VLLM 모드** (`LLM_MODE=vllm`): 실제 RunPod vLLM + 파인튜닝 모델. Phase 9 통합.
-
-전환은 환경변수만 (`app/backend/.env`):
-```bash
-LLM_MODE=vllm
-VLLM_BASE_URL=http://<runpod-ip>:8001/v1
-VLLM_MODEL=gemma-4-31b-nietzsche
-```
+2026-05-16 통합 이후:
+- **해설 모드 RAG**: `app/ml-backend/server.mjs` (Express, .mjs) → llama-server(chat :8000) + BGE-M3(embed :8001) + sqlite-vec. `POST /api/v1/explain` SSE 라이브.
+- **인터랙션 페르소나 / 요약 sLLM**: 미연결 (Phase 9 잔여). 프론트는 화면별 자동 발화 + 학습자 발화 흐름의 시각 시퀀스만.
+- **옛 FastAPI + `LLM_MODE=mock|vllm` 토글**: 폐기 노선, `app/_archive_backend/`에 회고용 보존.
 
 ---
 
 ## 6. Q&A 예상 질문 + 답변 결
 
-1. **"실제로 niche 사상을 답하는가, mock인가?"** — 발표 시연은 안정성 우선 mock. vLLM 연결은 Phase 9 RunPod 환경에서 검증.
+1. **"실제로 sLLM이 답하는가, mock인가?"** — 해설 모드는 라이브 RAG (llama.cpp 기반, 2026-05-16 통합). 인터랙션 페르소나·요약은 Phase 9 잔여라 현재 시연은 시각 시퀀스 중심.
 2. **"학습자가 한 발화를 차라투스트라가 *기억*하는가?"** — 화면 안 turn 누적은 컨텍스트로 들어감. Ep 1 → Ep 2는 카운드오버 요약 sLLM이 다리. 현재 시연은 시각만.
 3. **"왜 책 삽화 레이아웃인가?"** — 작품의 *읽는 결*을 화면에 옮기기 위함. 챗봇 결로 가면 작품 무게감이 깨짐.
 4. **"강조 표시 양식이 책 강조와 같은가?"** — 진한 잉크 + 굵게 + quote 안 직립체로 분리. 책의 강조 양식 그대로.

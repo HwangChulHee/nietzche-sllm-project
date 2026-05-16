@@ -3,7 +3,7 @@
 > 이 문서 *한 파일*만 읽으면 웹 Claude / ChatGPT / 다른 LLM 세션이 본 저장소를 전체적으로 파악할 수 있도록 압축한 인덱스.
 > 더 깊은 작업이 필요하면 §6 *시나리오별 함께 업로드할 파일* 표에 따라 추가 파일을 골라 업로드.
 
-작성일: 2026-05-01
+작성일: 2026-05-01 (최종 갱신: 2026-05-16)
 대상: 외부 LLM (파일 시스템 접근 없음)
 
 ---
@@ -12,9 +12,9 @@
 
 **프로젝트**: *"차라투스트라와의 동행"* — 학부 캡스톤 비주얼 노벨. 니체 『차라투스트라는 이렇게 말했다』 서문을 학습자가 차라투스트라 페르소나 sLLM과 함께 따라가는 인터랙티브 철학 소설.
 
-**현재 상태 (2026-05-01)**:
-- Phase 1~8 완료. Mock 모드로 Ep 1 + Ep 2 풀 사이클이 라이브.
-- Phase 9 (vLLM 실 연결 + RAG)는 RunPod 환경 의존 별도 작업.
+**현재 상태 (2026-05-16)**:
+- Phase 1~8 완료 + 2026-05-16 통합 (Electron 셸 + ml-backend 해설 RAG 실 연결).
+- 해설 모드는 llama.cpp 기반 RAG로 라이브, 인터랙션 페르소나·요약 sLLM은 Phase 9 잔여.
 - 5월 말 최종 발표 예정.
 
 **리포지토리**: `github.com/HwangChulHee/nietzche-sllm-project` (브랜치 `main`).
@@ -35,10 +35,11 @@
 - **Ep 2 축약 (4화면 + 엔딩)**: 시장 광장 도착 → 위버멘쉬 선포 → 광대 사건 → 학습자 재회 → 엔딩
 - **Ep 3 이후**: 확장 비전 슬라이드로 대체 (캡스톤 범위 밖)
 
-### 기술 — 모드 토글
-- 백엔드 sLLM은 `MockClient` / `VLLMClient` 두 구현체.
-- `LLM_MODE=mock` (기본, 시연 안정성) / `LLM_MODE=vllm` (Phase 9, 실제 추론).
-- 환경변수만 바꾸면 swap. 코드 수정 X.
+### 기술 — 백엔드 구성 (2026-05-16 통합 후)
+- **해설 모드**: `app/ml-backend/server.mjs` (Node + Express, .mjs) → llama.cpp 서버 2개(chat :8000 / embed :8001) + sqlite-vec. 실 RAG 라이브.
+- **인터랙션 페르소나 / 요약 sLLM**: 미연결 (Phase 9 잔여). 프론트는 Mock 또는 정적 데이터로 동작.
+- **Electron 셸**: `app/electron/`이 `localhost:3000` 로드. 통합 가동은 `cd app && npm run dev`.
+- 옛 FastAPI 백엔드(`app/_archive_backend/`)와 옛 `LLM_MODE=mock|vllm` 토글은 폐기 노선.
 
 ### 기술 — 책 삽화 레이아웃
 - 16:10 풀스크린 캔버스 + viewport 검은 letterbox.
@@ -68,14 +69,20 @@ nietzsche-project/
 │       └── PROJECT_PLAN_v2.md       # 기획 마스터
 │
 ├── app/
-│   ├── README.md              # 시연 셋업 + 12화면 시연 흐름
+│   ├── README.md              # 통합 가동 + 12화면 시연 흐름
 │   ├── CLAUDE.md              # app/ 라우터 (얇음)
 │   ├── PROGRESS.md            # 4/13 중간 발표 회고 (수정 금지)
+│   ├── package.json           # Electron + concurrently + wait-on, dev 스크립트
+│   │
+│   ├── electron/              # Electron 셸
+│   │   ├── main.js            # BrowserWindow가 http://localhost:3000 로드
+│   │   └── preload.js         # IPC 자리 (비어있음)
 │   │
 │   ├── frontend/              # Next.js 16 — 비주얼 노벨 UI
 │   │   ├── README.md          # 실행 + 화면 라우팅 매트릭스
 │   │   ├── CLAUDE.md          # 컴포넌트 14종 + Redux 5 슬라이스 + 훅 5 + 디자인 토큰
 │   │   ├── AGENTS.md          # Next.js 16 breaking changes 경고
+│   │   ├── .env.local         # NEXT_PUBLIC_API_BASE=http://localhost:3001
 │   │   ├── app/               # App Router 페이지 (/, /ep1/*, /ep2/*)
 │   │   ├── components/vn/     # VN 전용 컴포넌트
 │   │   ├── data/scenes/       # 정적 텍스트 + 인터랙션 메타
@@ -85,15 +92,17 @@ nietzsche-project/
 │   │   ├── lib/store/         # Redux slices
 │   │   └── public/illustrations/  # WebP 일러스트 13장 (Ep 1 8 + Ep 2 5)
 │   │
-│   └── backend/               # FastAPI — sLLM 라우팅 + 세이브
-│       ├── README.md          # 8개 엔드포인트 + 환경변수 + 트러블슈팅
-│       ├── CLAUDE.md          # 레이어 책임 + sLLM 클라이언트 ABC
-│       ├── BACKEND_STRUCTURE.md   # 아키텍처 도해 + 데이터 흐름
-│       ├── api/v1/endpoints/  # respond / explain / summarize / save
-│       ├── services/          # llm_client (저수준), sllm_clients (3종)
-│       ├── prompts/           # 시스템 프롬프트 3개
-│       ├── models/save.py     # SaveSlot (단일 슬롯)
-│       └── alembic/           # DB 마이그레이션
+│   ├── ml-backend/            # Node + Express — llama.cpp 기반 해설 RAG
+│   │   ├── README.md          # RAG 파이프라인 + CLI
+│   │   ├── server.mjs         # Express + SSE HTTP 래퍼 (포트 3001)
+│   │   ├── multiturn_rag.mjs  # CLI 진입점 (디버깅용)
+│   │   ├── router.mjs / query_rewriter.mjs / search.mjs
+│   │   ├── prompts/           # router / query_rewriter / commentary_system
+│   │   ├── data/              # interp/orig TSZ 1부 Prologue jsonl
+│   │   └── corpus.db          # sqlite-vec 벡터 인덱스 (~80MB)
+│   │
+│   └── _archive_backend/      # 옛 FastAPI 백엔드 (archive됨, 폐기 노선)
+│       └── (옛 chat 엔드포인트 / SaveSlot / Alembic 등 회고용 보존)
 │
 ├── demo/
 │   └── scenario_script.md     # 발표 시연 대본 (~10분)
@@ -115,29 +124,31 @@ nietzsche-project/
 |---|---|
 | Frontend | Next.js 16 App Router + TypeScript + Redux Toolkit + Tailwind 4 |
 | Frontend SSE | `fetch` + `ReadableStream` 직접 파싱 (`lib/api/sse.ts`) |
-| Backend | FastAPI (비동기) + Pydantic + SQLAlchemy + Alembic |
-| Backend SSE | `StreamingResponse(media_type="text/event-stream")` |
-| DB | PostgreSQL (asyncpg) — 단일 SaveSlot 테이블 |
-| LLM | Gemma 4 31B (베이스, LoRA 미사용) on vLLM 0.19 (Phase 9) |
-| 임베딩 | BGE-M3 small + HyDE (Phase 9) |
-| 인프라 | RunPod A100 + Cloudflare Quick Tunnel (P0) / Tauri 패키징 (P2) |
+| Backend | Node + Express (`app/ml-backend/server.mjs`, .mjs ESM) |
+| Backend SSE | Express `res.write` 기반 SSE (`data: ...\n\n`) |
+| Vector store | sqlite-vec (`app/ml-backend/corpus.db`) |
+| Chat LLM | Gemma 4 E2B Q4_K_M, llama.cpp 서버 (포트 8000) |
+| 임베딩 | BGE-M3 Q4_K_M, llama.cpp 서버 (포트 8001) |
+| 패키징 | Electron 셸 (`app/electron/`, `cd app && npm run dev`) |
+| 옛 스택 (archive) | FastAPI + SQLAlchemy + Alembic + PostgreSQL — `app/_archive_backend/` |
 
 ---
 
-## 5. 8개 백엔드 엔드포인트 (`/api/v1/`)
+## 5. ml-backend HTTP 엔드포인트
 
-모두 `text/event-stream` SSE. 이벤트 타입: `metadata` / `delta` / `done` / `error`.
+SSE 이벤트 타입: `metadata` / `delta` / `done` / `error`. (`POST /api/v1/explain`은 라이브 RAG, 나머지는 Phase 9 잔여)
 
-| 메서드 | 경로 | sLLM | 화면 |
+| 메서드 | 경로 | sLLM | 상태 |
 |---|---|---|---|
-| POST | `/respond` | Persona | 인터랙션 학습자 발화/[침묵] |
-| POST | `/respond/auto` | Persona | 인터랙션 화면 진입 자동 발화 |
-| POST | `/respond/farewell` | Persona | [작별을 고한다] 마지막 발화 |
-| POST | `/explain` | Explain | [해설] [더 깊이 묻기] |
-| POST | `/summarize` | Summary | Ep 1 → Ep 2 카운드오버 |
-| GET / POST / DELETE | `/save` | Summary (POST 내부) | 단일 슬롯 |
+| POST | `/api/v1/explain` | Explain (RAG) | ✅ 라이브 — `ml-backend/server.mjs`, llama.cpp 기반 멀티턴 RAG |
+| GET | `/health` | — | ✅ `{ indexed_chunks, ... }` |
+| POST | `/api/v1/respond` (계열 3종) | Persona | 🟡 미연결 — 프론트는 Mock 또는 자체 처리 |
+| POST | `/api/v1/summarize` | Summary | 🟡 미연결 |
+| GET / POST / DELETE | `/api/v1/save` | Summary (POST 내부) | 🟡 미연결 (옛 FastAPI에 구현, archive됨) |
 
-자세한 요청/응답 스키마: `app/backend/README.md` 또는 `app/backend/schemas/vn.py`.
+`/api/v1/explain` 파이프라인: `classify → COMMENTARY면 rewrite → embed → search → LLM stream` / OOD·AMB는 short-circuit.
+
+옛 8개 엔드포인트 FastAPI 구현은 `app/_archive_backend/api/v1/endpoints/` 참고용 보존.
 
 ---
 
@@ -177,17 +188,17 @@ nietzsche-project/
 - `app/frontend/app/globals.css` (디자인 토큰 + 스타일)
 - 작업 대상 컴포넌트 (예: `components/vn/InteractionScreen.tsx`)
 
-### "백엔드 sLLM 라우팅 작업"
-- `app/backend/CLAUDE.md`
-- `app/backend/BACKEND_STRUCTURE.md`
-- `app/backend/services/sllm_clients.py` (Persona/Explain/Summary ABC + Mock + VLLM)
-- `app/backend/services/llm_client.py` (저수준 추상)
+### "ml-backend (해설 RAG) 작업"
+- `app/ml-backend/README.md` (파이프라인 / CLI / 결정 로그)
+- `app/ml-backend/server.mjs` (Express SSE 래퍼)
+- `app/ml-backend/router.mjs` / `query_rewriter.mjs` / `search.mjs`
+- `app/ml-backend/prompts/{router,query_rewriter,commentary_system}.md`
 
-### "Mock 응답 풀 / 시스템 프롬프트 검토"
-- `app/backend/services/mock_data.py` (화면별 응답 풀)
-- `app/backend/prompts/persona_v1.txt`
-- `app/backend/prompts/explain_v1.txt`
-- `app/backend/prompts/summary_v1.txt`
+### "옛 FastAPI 엔드포인트 / 프롬프트 참조 (archive)"
+- `app/_archive_backend/api/v1/endpoints/` (respond / explain / summarize / save)
+- `app/_archive_backend/services/sllm_clients.py` (Persona/Explain/Summary ABC + Mock + VLLM)
+- `app/_archive_backend/services/mock_data.py` (옛 화면별 응답 풀)
+- `app/_archive_backend/prompts/{persona,explain,summary}_v1.txt`
 
 ### "발표 시연 / 대본 검토"
 - `demo/scenario_script.md` (사전 준비 + 발표 흐름 + 시연 포인트 매트릭스 + Q&A)
@@ -220,11 +231,11 @@ nietzsche-project/
 
 | 용어 | 의미 |
 |---|---|
-| sLLM | "small LLM" — Gemma 4 31B 같은 중소형 모델. RAG로 보강. |
-| Persona / Explain / Summary | 서로 다른 시스템 프롬프트로 호출되는 3종 sLLM 도메인 |
-| Mock 모드 | 미리 짠 응답 풀에서 SSE 시뮬 (시연 안정성) |
-| vLLM 모드 | 실제 RunPod GPU 추론 (Phase 9) |
-| HyDE | Hypothetical Document Embeddings — 가상 문서 생성 후 임베딩으로 검색 |
+| sLLM | "small LLM" — Gemma 4 E2B 같은 중소형 모델. RAG로 보강. |
+| Persona / Explain / Summary | 서로 다른 시스템 프롬프트로 호출되는 3종 sLLM 도메인 (현재 Explain만 실 연결) |
+| llama.cpp 트랙 | 윈도우 온디바이스 추론. Gemma 4 E2B Q4_K_M (chat) + BGE-M3 Q4_K_M (embed). 2026-05-16 통합 후 채택 |
+| 옛 vLLM 트랙 (폐기) | RunPod A100 + vLLM 0.19 + Gemma 4 31B. CUDA 드라이버 호환 + 학생 비용 이유로 폐기 |
+| HyDE | Hypothetical Document Embeddings (현재 미사용, 폐기) |
 | RAG | Retrieval-Augmented Generation — 검색 결과를 시스템 프롬프트에 주입 |
 | 카운드오버 transition | Ep 1 → Ep 2 사이 시간 흐름 표현 + 백그라운드 요약 |
 | 정적 풀이 / 동적 풀이 | 해설 패널의 *미리 작성된 손글씨* / *[더 깊이 묻기] sLLM 응답* |
@@ -243,8 +254,9 @@ nietzsche-project/
 | "Ep 1 본문 텍스트 보여줘" | `docs/vn/EP1_TEXT_AND_PROMPTS.md` §5 |
 | "Ep 2 본문 텍스트는?" | `app/frontend/data/scenes/ep2_*.ts` (마스터 문서 없음) |
 | "어떤 컴포넌트가 있어?" | `app/frontend/CLAUDE.md` 컴포넌트 매트릭스 |
-| "백엔드 엔드포인트 목록?" | `app/backend/README.md`, `app/backend/CLAUDE.md` |
-| "vLLM 실 연결은 어떻게?" | Phase 9 작업, `app/README.md` 모드 토글 + `archived/README_legacy.md` (RunPod 셋업) |
+| "백엔드 엔드포인트 목록?" | `app/README.md` (ml-backend HTTP 엔드포인트), `app/ml-backend/README.md` |
+| "해설 RAG는 어떻게 동작?" | `app/ml-backend/README.md` (파이프라인 + 결정 로그) |
+| "실 sLLM 연결은 어떻게?" | 해설 모드는 이미 라이브 (`ml-backend`). 인터랙션·요약은 Phase 9 잔여 — `docs/vn/VN_MIGRATION_PLAN.md` §11 |
 | "발표 시 무엇을 보여줘?" | `demo/scenario_script.md` |
 | "디자인 토큰이 뭐야?" | `app/frontend/app/globals.css` 상단 + `app/frontend/CLAUDE.md` 디자인 토큰 |
 | "강조 표시는 어떻게 작동?" | 본문 안 `**...**` 마크다운식 → `<em class="vn-emph">` (`NarrationScreen.tsx`의 `renderInline`) |
@@ -264,10 +276,11 @@ nietzsche-project/
 
 ## 11. 한 줄 요약
 
-> 사용자 황철희(@HwangChulHee)의 학부 캡스톤 비주얼 노벨. Ep 1 + Ep 2 풀 사이클이 Mock 모드로 동작하며, Phase 9 (vLLM 실 연결)는 RunPod 환경 의존 별도 작업. 작품 결은 *책 삽화 레이아웃 + 세피아 톤 + 절제된 인터랙션*. 디자인 결정은 `docs/vn/VN_PROGRESS.md`에 누적.
+> 사용자 황철희(@HwangChulHee)의 학부 캡스톤 비주얼 노벨. Ep 1 + Ep 2 풀 사이클 라이브 + Electron 셸 + 해설 모드는 llama.cpp 기반 RAG 실 연결. 인터랙션 페르소나·요약 sLLM은 Phase 9 잔여. 작품 결은 *책 삽화 레이아웃 + 세피아 톤 + 절제된 인터랙션*. 디자인 결정은 `docs/vn/VN_PROGRESS.md`에 누적.
 
 ---
 
 ## 부록 — 변경 이력
 
 - 2026-05-01: 초안 작성. Phase 8 완료 시점 + 14개 커밋 origin/main 반영 시점.
+- 2026-05-16: 통합 작업 반영. RunPod/vLLM 트랙 폐기 → 윈도우 온디바이스 llama.cpp 트랙. ml-backend(Express, .mjs) + Electron 셸 통합 가동. 옛 FastAPI 백엔드는 `app/_archive_backend/`로 archive.
