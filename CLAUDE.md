@@ -29,17 +29,18 @@
 
 ## 작업 영역
 
-- **`app/`** (살아있음, 재활용): FastAPI + Next.js 16 셋업, LLMClient 추상화, SSE 스트리밍, Redux 패턴, Alembic 마이그레이션 — 비주얼 노벨에 그대로 확장.
+- **`app/`** (살아있음): Next.js 16 (`app/frontend/`) + Express ml-backend (`app/ml-backend/`, .mjs, llama.cpp 기반 해설 RAG) + Electron 셸 (`app/electron/`). 통합 가동은 `cd app && npm run dev`.
 - **`docs/vn/`** (단일 진실 소스): 작업 문서 8개. 진입점은 `VN_AGENTS.md`.
+- **`app/_archive_backend/`** — 옛 FastAPI 백엔드. archive됨 (폐기 노선).
 - **신규 디렉토리는 Phase별 산출물 정의에 따라 생성** (Phase 4의 `data/scenes/`, Phase 5의 `public/illustrations/` 등).
 
 ---
 
 ## 핵심 작업 원칙
 
-1. **UI 먼저, 백엔드 나중** — 실제 vLLM 연결은 Phase 9
-2. **Mock 우선** — `LLM_MODE=mock` 기본, `MockClient` / `VLLMClient` 두 구현체
-3. **백엔드 인터페이스는 일찍 확정** — 프론트가 swap-in으로 그대로 사용
+1. **UI 먼저, 백엔드 나중** — Phase 1~8까지 Mock 모드로 풀 사이클, Phase 9에서 실 백엔드 연결
+2. **갈아끼울 수 있는 구조** — 프롬프트/모델/모드는 환경변수 + 외부 파일
+3. **2026-05-16 이후** — 해설 모드는 `app/ml-backend`(Express + llama.cpp + sqlite-vec)로 실 RAG. 인터랙션 페르소나·요약 sLLM은 Phase 9 잔여
 4. **컨셉 축은 합의됨** — 세 모드 / 시간 흐름 / Ep 1+2 범위는 가볍게 뒤집지 말 것
 5. **사용자 확인 필요 작업은 사전 확인** — `docs/vn/VN_AGENTS.md` §3.2 참조
 
@@ -61,5 +62,6 @@
 
 ## 마지막 업데이트
 
+- 2026-05-16: `app/ml-backend` 통합 (옛 `nietzche-local` PoC 이주) + Electron 셸 + 해설 모드 llama.cpp 기반 RAG 실 연결. 옛 FastAPI 백엔드(`app/backend/`)는 `app/_archive_backend/`로 archive.
 - 2026-05-01: Phase 1 완료. 옛 Track 1/2 컨텍스트를 비주얼 노벨 단일 미션 라우터로 교체.
 - 옛 컨텍스트는 `archived/CLAUDE_legacy.md` 참조.

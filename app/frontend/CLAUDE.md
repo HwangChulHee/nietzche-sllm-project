@@ -71,12 +71,13 @@
 
 - `sse.ts`: 공통 SSE 파서 (metadata/delta/done/error). AbortError silent.
 - `persona.ts`: `streamRespond` / `streamRespondAuto` / `streamRespondFarewell`
-- `explain.ts`: `streamExplain`
+- `explain.ts`: `streamExplain` — `app/ml-backend/server.mjs`의 `POST /api/v1/explain` (라이브 RAG, llama.cpp 기반)
 - `summarize.ts`: `streamSummarize`
 - `save.ts`: `getSave` / `postSave` / `deleteSave`
-- `types.ts`: 백엔드 schemas/vn.py 미러
+- `types.ts`: SSE 이벤트(metadata/delta/done/error) 스키마 미러
 
-base URL은 `process.env.NEXT_PUBLIC_API_BASE` (기본 `http://localhost:8000`).
+base URL은 `process.env.NEXT_PUBLIC_API_BASE` (기본 `http://localhost:3001` — ml-backend Express 래퍼).
+인터랙션 페르소나·요약 sLLM은 Phase 9에서 ml-backend로 통합 예정 (현재 explain만 실 연결).
 
 ---
 

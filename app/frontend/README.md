@@ -16,13 +16,16 @@
 # 1. 의존성 설치 (최초 1회)
 npm install
 
-# 2. (선택) 백엔드 base URL 환경변수
-echo "NEXT_PUBLIC_API_BASE=http://localhost:8000" > .env.local
+# 2. 백엔드 base URL 환경변수 (기본값, 통합 가동 시 자동)
+echo "NEXT_PUBLIC_API_BASE=http://localhost:3001" > .env.local
 
 # 3. 개발 서버
 npm run dev
 # → http://localhost:3000
 ```
+
+해설 모드 RAG를 라이브로 동작시키려면 `app/ml-backend`(포트 3001)도 같이 띄워야 한다.
+통합 가동(ml-backend + frontend + Electron 동시)은 `cd app && npm run dev` 참조 (`../README.md`).
 
 ---
 
@@ -92,7 +95,7 @@ npm run start         # 프로덕션 실행
 
 | 변수 | 기본값 | 용도 |
 |---|---|---|
-| `NEXT_PUBLIC_API_BASE` | `http://localhost:8000` | 백엔드 base URL |
+| `NEXT_PUBLIC_API_BASE` | `http://localhost:3001` | 백엔드 base URL (`app/ml-backend/server.mjs`) |
 
 `.env.local`에 정의. `process.env.NEXT_PUBLIC_API_BASE`로 `lib/api/sse.ts`에서 참조.
 

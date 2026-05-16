@@ -7,14 +7,77 @@
 
 ## 현재 상태 요약
 
-**최종 업데이트**: 2026-05-01
-**현재 Phase**: 8 완료 + UI/UX 폴리시 패스 / Phase 9 대기 (vLLM 실제 연결 + RAG)
-**상태**: 🟢 **Ep 1 + Ep 2 풀 사이클 완성**. 타이틀 → Ep 1 (정적 나레이션 #2~#4 + 해설 + 인터랙션 #5~#7 + 저장/불러오기 + 엔딩 #8) → 카운드오버 transition → Ep 2 (정적 나레이션 #1~#3 + 해설 + 인터랙션 #4 + 엔딩) → 타이틀 복귀 모두 Mock 모드로 동작. 시연 대본 작성.
-**모드**: 백엔드 `LLM_MODE=mock`
+**최종 업데이트**: 2026-05-16
+**현재 Phase**: 8 완료 + 2026-05-16 통합 (Electron + ml-backend 해설 RAG 실 연결) / Phase 9 잔여 (인터랙션 페르소나·요약 sLLM)
+**상태**: 🟢 **Ep 1 + Ep 2 풀 사이클 + Electron 셸 + 해설 모드 실 RAG**. 타이틀 → Ep 1 (정적 나레이션 #2~#4 + 해설 + 인터랙션 #5~#7 + 저장/불러오기 + 엔딩 #8) → 카운드오버 transition → Ep 2 (정적 나레이션 #1~#3 + 해설 + 인터랙션 #4 + 엔딩) → 타이틀 복귀. 해설 모드는 llama.cpp 기반 RAG 라이브, 인터랙션·요약은 미연결.
+**가동**: `cd app && npm run dev` (ml-backend :3001 + frontend :3000 + Electron 동시), 사전 전제: llama-server 2개(chat :8000, embed :8001)
 
 ---
 
 ## 변경 로그 (최신순)
+
+### 2026-05-16 — 통합 작업 (Electron + ml-backend + 해설 RAG 실 연결)
+
+#### 작업
+
+- **app/package.json 신설**: Electron + concurrently + wait-on, `npm run dev` 스크립트로 ml-backend + frontend + Electron 동시 가동
+- **app/electron/ 신설**: `main.js` (BrowserWindow가 `http://localhost:3000` 로드), `preload.js` (IPC 자리, 현재 비어있음)
+- **app/ml-backend/ 신설 (nietzche-local에서 이주)**:
+  - 이주 파일: `router.mjs`, `query_rewriter.mjs`, `search.mjs`, `logger.mjs`, `prompts.mjs`, `build_index.mjs`, `multiturn_rag.mjs` (CLI 진입점 보존), `test_search.mjs`, `test_sqlitevec.mjs`, `prompts/` (commentary_system.md, query_rewriter.md, router.md), `data/` (interp/orig TSZ 1부 Prologue jsonl), `corpus.db` (80MB sqlite-vec 인덱스), `package.json`, `README.md`
+  - **신규**: `server.mjs` — Express + SSE HTTP 래퍼, 비주얼 노벨 진입점
+- **app/backend/ → app/_archive_backend/ 이동**: 옛 FastAPI 백엔드 archive (폐기 노선)
+- **frontend 환경변수**: `app/frontend/.env.local` 신설 — `NEXT_PUBLIC_API_BASE=http://localhost:3001`
+- **next.config.ts**: `turbopack.root` 명시 추가 (multi-lockfile 충돌 해결)
+- **타임아웃 상향**: `router.mjs` `DEFAULT_OPTS.timeoutMs` 5000 → 10000, `query_rewriter.mjs` 5000 → 8000
+- **DB_PATH 절대경로화**: `server.mjs`에서 `path.join(__dirname, 'corpus.db')` — 작업 디렉토리 무관하게 동작
+
+#### 산출물 — server.mjs HTTP 엔드포인트
+
+- `POST /api/v1/explain` (SSE) — 해설 모드 멀티턴 RAG
+  - 파이프라인: `classify → COMMENTARY면 rewrite → embed → search → LLM stream` / `OUT_OF_DOMAIN·AMBIGUOUS`면 short-circuit
+  - SSE 이벤트: `metadata` (router/rewrite/rag 메타) / `delta` (토큰 stream) / `done` / `error`
+- `GET /health` — `indexed_chunks` 등 반환
+
+#### 검증된 동작
+
+- 해설 모드 [더 깊이 묻기] → COMMENTARY RAG 응답 SSE 스트리밍
+- OUT_OF_DOMAIN short-circuit (도메인 외 질문 거절)
+- 책 삽화 UI (세피아 #f5ecd9 + 도레 판화) Electron 셸에서 정상 렌더
+
+#### 디렉토리 구조 변경 요약
+
+```
+app/
+├── package.json              [신규]
+├── electron/                 [신규]
+│   ├── main.js
+│   └── preload.js
+├── ml-backend/               [신규 디렉토리, nietzche-local에서 이주]
+│   ├── server.mjs            (신규)
+│   ├── multiturn_rag.mjs     (CLI 보존)
+│   ├── router.mjs / query_rewriter.mjs / search.mjs
+│   ├── logger.mjs / prompts.mjs / build_index.mjs
+│   ├── prompts/ data/ test_*.mjs
+│   ├── corpus.db
+│   └── README.md
+├── _archive_backend/         [구 backend/, archive됨]
+└── frontend/
+    ├── .env.local            [신규]
+    └── next.config.ts        [변경: turbopack.root]
+```
+
+#### 알려진 한계
+
+- **인터랙션 페르소나 sLLM 미연결**: `useInteraction`/`/respond` 계열은 Mock 또는 frontend 자체 처리. Phase 9 잔여.
+- **요약 sLLM 미연결**: Ep 1 → Ep 2 카운드오버 transition은 시각 시퀀스만, 백그라운드 요약 호출 없음. Phase 9 잔여.
+- **CPU only**: 해설 RAG 1턴당 ~25초 (Gemma 4 E2B Q4_K_M, 윈도우 CPU). GPU 가속 시 단축 가능.
+- **코퍼스 19청크 한정**: TSZ 1부 Prologue만. 확장은 Phase 9 P1.
+
+#### 다음 잔여
+
+- 인터랙션 페르소나 sLLM 실 연결 (`/respond`, `/respond/auto`, `/respond/farewell`을 ml-backend로)
+- 요약 sLLM 실 연결 (`/summarize` — Ep 1 → Ep 2 카운드오버 백그라운드 호출)
+- 코퍼스 확장 (Discourses 1부 22편 → 100+청크)
 
 ### 2026-05-01 — Phase 8 폴리시 패스 (UI/UX 정합 + 정책 문서 갱신)
 
@@ -450,7 +513,7 @@
 | 6 | 인터랙션 컴포넌트 | ✅ 완료 (2026-05-01) |
 | 7 | 해설 패널 + 모달 + 토스트 + 세이브 | ✅ 완료 (2026-05-01) |
 | 8 | Ep 2 통합 + transition + 시연 대본 | ✅ 완료 (2026-05-01) |
-| 9 | (별도) vLLM 실제 연결 + RAG + 요약 sLLM | 🔵 Phase 8 후 |
+| 9 | (별도) 실 백엔드 연결 + RAG + 요약 sLLM | 🟡 부분 완료 (2026-05-16, 해설 모드만 llama.cpp로 변형 진행) |
 
 ---
 

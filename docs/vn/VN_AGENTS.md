@@ -30,10 +30,11 @@
 
 **기술 스택**:
 - Frontend: Next.js 16 (App Router) + TypeScript + Redux Toolkit + Tailwind
-- Backend: FastAPI + SQLite + SSE 스트리밍
-- LLM: Gemma 4 31B (RunPod A100 + vLLM 0.19) — P0
-- 임베딩: BGE-M3 small + HyDE
-- 패키징: Cloudflare Quick Tunnel (P0), Tauri (P2)
+- Backend: Node + Express (`app/ml-backend/server.mjs`, .mjs ESM) + sqlite-vec + SSE 스트리밍
+- LLM: Gemma 4 E2B Q4_K_M, llama.cpp 서버 (윈도우 온디바이스, 포트 8000)
+- 임베딩: BGE-M3 Q4_K_M, llama.cpp 서버 (포트 8001)
+- 패키징: Electron 셸 (`app/electron/`, `npm run dev`)
+- 옛 FastAPI 백엔드는 `app/_archive_backend/`로 archive됨 (폐기 노선)
 
 **현재 단계**: 옛날 상담 챗봇 (`app/`, Phase 2 완료) → 비주얼 노벨로 전환 작업 시작.
 
@@ -184,16 +185,18 @@
 | **전체 컨셉 + 폐기/유지 매트릭스** | `HANDOFF_CONTEXT.md` | 비주얼 노벨 컨셉 전체 요약 |
 | **기획 마스터 (장기)** | `PROJECT_PLAN_v2.md` | 13개 섹션 컨셉축, 폐기 목록 |
 
-### 옛날 상담 챗봇 자산 (재활용 시 참조)
+### 옛 자산 (회고 / 참조용)
 
 | 필요한 정보 | 파일 |
 |---|---|
-| 기존 백엔드 구조 + LLM 클라이언트 추상화 | `app/backend/` (살아있음, 재활용) |
-| 기존 SSE 스트리밍 패턴 | `app/backend/api/v1/endpoints/chat.py` |
-| 기존 DB 모델 (재활용 가능) | `app/backend/models/chat.py` |
-| 기존 환경변수 schema | `app/backend/core/config.py` |
-| Pod 재시작 후 시스템 복구 절차 | `app/README.md` |
-| 옛날 챗봇 UI 컴포넌트 (Phase 1에서 archived/로 이동 예정) | `app/frontend/components/` |
+| 옛 FastAPI 백엔드 (Phase 2 산출물, archive됨) | `app/_archive_backend/` |
+| 옛 SSE 스트리밍 패턴 (FastAPI) | `app/_archive_backend/api/v1/endpoints/chat.py` |
+| 옛 DB 모델 (SaveSlot, Conversation 등) | `app/_archive_backend/models/` |
+| 옛 환경변수 schema | `app/_archive_backend/core/config.py` |
+| 현행 통합 가동 / ml-backend 엔드포인트 | `app/README.md` |
+| 옛날 챗봇 UI 컴포넌트 | `archived/components/` |
+
+> 2026-05-16 이후 활성 백엔드는 `app/ml-backend/` (Node + Express, llama.cpp 기반 해설 RAG). `_archive_backend/`는 회고 자산.
 
 ### 데이터 파이프라인 (이 작업과 무관 — 절대 건드리지 말 것)
 

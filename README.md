@@ -43,22 +43,21 @@
 ### Backend
 | 항목 | 기술 |
 |---|---|
-| Framework | FastAPI (비동기) |
-| Database | SQLite + SQLAlchemy + Alembic (세이브 슬롯) |
-| Streaming | SSE (모든 sLLM 응답) |
+| Framework | Node + Express (`app/ml-backend/server.mjs`, .mjs ESM) |
+| Vector store | sqlite-vec (corpus.db) |
+| Streaming | SSE (해설 모드 RAG 응답) |
 
 ### LLM / 인프라
 | 항목 | 기술 |
 |---|---|
-| Base Model | Gemma 4 31B (베이스 모델, LoRA 미사용) |
-| Inference | vLLM 0.19 (RunPod A100) |
-| Embedding | BGE-M3 small + HyDE |
-| 패키징 | Cloudflare Quick Tunnel (P0), Tauri (P2) |
+| Chat (router / rewriter / generator) | Gemma 4 E2B Q4_K_M, llama.cpp 서버 (포트 8000) |
+| Embedding | BGE-M3 Q4_K_M, llama.cpp 서버 (포트 8001) |
+| 패키징 | Electron 셸 (`app/electron/`, `npm run dev`) |
 
 ### 개발 원칙
-- **Mock 우선**: 모든 백엔드 엔드포인트는 `MockClient` / `VLLMClient` 두 구현체. `LLM_MODE=mock`이 기본
-- **UI 먼저, 백엔드 나중**: 실제 vLLM 연결은 Phase 9 (마지막)
+- **UI 먼저, 백엔드 나중**: Phase 1~8까지 Mock 모드로 풀 사이클 구축, Phase 9에서 실 백엔드 연결
 - **갈아끼울 수 있는 구조**: 프롬프트, 모델, 모드는 모두 환경변수/외부파일
+- **2026-05-16 통합 이후**: 해설 모드는 `app/ml-backend`(Express + llama.cpp + sqlite-vec)로 실 RAG 연결. 인터랙션 페르소나·요약 sLLM은 Phase 9 잔여
 
 ---
 
@@ -76,18 +75,20 @@ nietzsche-project/
 │   ├── EP1_ILLUSTRATIONS.md
 │   └── PROJECT_PLAN_v2.md
 │
-├── app/                      # 살아있는 코드 (재활용)
+├── app/                      # 살아있는 코드
+│   ├── package.json          # Electron + concurrently + wait-on, dev 스크립트
+│   ├── electron/             # Electron 셸 (main.js, preload.js)
 │   ├── frontend/             # Next.js 16 — 비주얼 노벨 UI
-│   │   ├── app/              # 라우팅 (Phase 3에서 신설)
-│   │   ├── components/       # 컴포넌트 (옛 챗봇 컴포넌트는 archived/로 이동됨)
-│   │   ├── lib/              # hooks, store
-│   │   └── data/             # 정적 텍스트, 해설 (Phase 4+)
-│   └── backend/              # FastAPI — sLLM 라우팅 + 세이브
-│       ├── api/v1/           # 엔드포인트 (Phase 2에서 재작성)
-│       ├── services/         # LLMClient 추상화
-│       ├── models/           # SQLAlchemy 모델
-│       ├── prompts/          # 시스템 프롬프트 (Phase 2에서 신설)
-│       └── core/             # 설정
+│   │   ├── app/              # 라우팅
+│   │   ├── components/vn/    # 비주얼 노벨 컴포넌트
+│   │   ├── lib/              # hooks, store, api
+│   │   └── data/             # 정적 텍스트, 해설
+│   ├── ml-backend/           # Node + Express, llama.cpp 기반 해설 RAG
+│   │   ├── server.mjs        # SSE HTTP 래퍼 (포트 3001)
+│   │   ├── multiturn_rag.mjs # CLI (디버깅)
+│   │   ├── prompts/ data/    # 시스템 프롬프트 + 코퍼스
+│   │   └── corpus.db         # sqlite-vec 벡터 인덱스
+│   └── _archive_backend/     # 옛 FastAPI 백엔드 (archive됨, 폐기 노선)
 │
 ├── archived/                 # 회고 자산 (수정 금지)
 │   ├── README_legacy.md      # 옛 상담 챗봇 README
@@ -114,29 +115,21 @@ nietzsche-project/
 
 ---
 
-## Quick Start (Mock 모드, 시연 권장)
+## Quick Start (통합 가동, 시연)
 
-3분 안에 띄울 수 있는 가장 단순한 흐름:
+전제: 해설 모드 RAG용 llama-server 2개(chat :8000, embed :8001)가 떠 있어야 함.
+자세한 llama-server 기동·모델 파일 위치는 `app/README.md` 참조.
 
-```bash
-# 1. DB 마이그레이션 (최초 1회)
-cd app/backend
-PYTHONPATH=. poetry run alembic upgrade head
-
-# 2. 백엔드 (mock 모드, 포트 8000)
-PYTHONPATH=. poetry run uvicorn main:app --port 8000
-
-# 3. 프론트엔드 (별 터미널, 포트 3000)
-cd ../frontend
-npm install   # 최초 1회
+```powershell
+cd app
+npm install   # 최초 1회 (root + ml-backend + frontend)
 npm run dev
+# → ml-backend(:3001) + frontend(:3000) + Electron 동시 가동
 ```
 
-브라우저에서 `http://localhost:3000` → [시작] → Ep 1 진행.
+Electron 창이 `http://localhost:3000`을 로드 → 타이틀 → [시작] → Ep 1 진행.
 
-`/health` 응답이 `{"status":"alive","mode":"mock"}`이면 정상.
-
-vLLM 실 연결(Phase 9)은 `LLM_MODE=vllm` + `VLLM_BASE_URL` 환경변수로 swap. 자세한 운영 절차는 `app/README.md` 참조.
+`http://localhost:3001/health` 응답에 `indexed_chunks` 숫자가 떠 있으면 정상.
 
 ---
 
@@ -148,10 +141,11 @@ vLLM 실 연결(Phase 9)은 `LLM_MODE=vllm` + `VLLM_BASE_URL` 환경변수로 sw
 
 ---
 
-## 진행 상태 (2026-05-01)
+## 진행 상태 (2026-05-16)
 
-- **Phase 1~8 완료** — Ep 1 + Ep 2 풀 사이클이 Mock 모드로 라이브
-- **Phase 9 대기** — vLLM 실 연결 + RAG (RunPod 환경 의존, 별도 작업)
+- **Phase 1~8 완료** — Ep 1 + Ep 2 풀 사이클 라이브
+- **2026-05-16 통합** — Electron 셸 + ml-backend(:3001) HTTP 래퍼 + frontend(:3000) 동시 가동. 해설 모드는 llama.cpp 기반 RAG로 실 연결.
+- **Phase 9 잔여** — 인터랙션 페르소나 / 요약 sLLM 실 연결
 
 | Phase | 산출물 | 상태 |
 |---|---|---|
@@ -163,7 +157,7 @@ vLLM 실 연결(Phase 9)은 `LLM_MODE=vllm` + `VLLM_BASE_URL` 환경변수로 sw
 | 6 | 인터랙션 컴포넌트 + Mock SSE | ✅ |
 | 7 | 해설 패널 + 모달 + 토스트 + 세이브 | ✅ |
 | 8 | Ep 2 통합 + transition + 시연 대본 | ✅ |
-| 9 | vLLM 실 연결 + RAG | 🔵 RunPod 의존 |
+| 9 | 실 백엔드 연결 + RAG | 🟡 부분 완료 (2026-05-16, 해설 모드만 llama.cpp로 변형 진행) |
 
 ---
 
@@ -174,7 +168,8 @@ vLLM 실 연결(Phase 9)은 `LLM_MODE=vllm` + `VLLM_BASE_URL` 환경변수로 sw
 | ~ 4/13 | 중간 발표 (옛 상담 챗봇 컨셉, 완료) |
 | 4/29 | 보충 발표 — 비주얼 노벨 전환 발표 (완료) |
 | 4/30 ~ 5/01 | Phase 1~8 완료 (Mock 모드) |
-| 5/01 ~ 5월 말 | (선택) Phase 9 RunPod vLLM 통합 + 시연 리허설 |
+| 5/16 | Electron + ml-backend(llama.cpp RAG) 통합, 해설 모드 실 연결 |
+| 5/16 ~ 5월 말 | (선택) 인터랙션 페르소나·요약 sLLM 실 연결 + 시연 리허설 |
 | **5월 말** | **최종 발표** |
 
 ---

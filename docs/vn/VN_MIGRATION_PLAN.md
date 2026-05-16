@@ -608,21 +608,27 @@ Phase 8 — Ep 2 통합 + transition + 시연 시나리오
 
 ---
 
-## 11. Phase 9 (참고) — vLLM 실제 연결
+## 11. Phase 9 (참고) — 실 백엔드 연결
 
-> 이 Phase는 *백엔드 결정 사항이 다 굳어진 후* 별도 세션에서. 본 마이그레이션 플랜의 *바깥*.
+> 🟡 **부분 완료 (2026-05-16, llama.cpp로 변형 진행)**.
+> RunPod + vLLM 트랙은 폐기, 윈도우 온디바이스 llama.cpp 트랙으로 채택.
+> 자세한 결정 로그는 `app/ml-backend/README.md` "결정 로그" 절 / 작업 결과는 `VN_PROGRESS.md` 2026-05-16 블록.
 
-**작업 개요**:
+**원 계획 (vLLM 트랙, 폐기)**:
 - `LLM_MODE=vllm`으로 swap
-- `VLLMClient` 구현 (기존 Phase 2의 추상화 위에)
-- vLLM 서버 띄우기 (Gemma 4 31B, 베이스 모델 — LoRA 어댑터 X)
-- RAG 인덱스 구축 (BGE-M3 + 단일 인덱스 + 시간 메타 태그)
-- HyDE 구현
-- 풀이 RAG / 개인화 RAG 통합
-- 요약 sLLM 검증
-- Cloudflare Quick Tunnel 운영
+- vLLM 서버 (Gemma 4 31B, 베이스 모델 — LoRA 어댑터 X)
+- HyDE / Cloudflare Quick Tunnel 운영
 
-**전제**: Phase 8까지 Mock 모드로 완성된 작품이 있어서, vLLM 응답 품질만 *swap-in*하여 검증.
+**실 진행 (llama.cpp 트랙, 2026-05-16 통합)**:
+- ✅ `app/ml-backend/` 신설 (Node + Express, .mjs) — 옛 nietzche-local PoC를 메인 repo로 이주
+- ✅ llama.cpp 서버 2개: Gemma 4 E2B Q4_K_M (chat, :8000) + BGE-M3 Q4_K_M (embed, :8001)
+- ✅ sqlite-vec 단일 인덱스 (`corpus.db`, TSZ 1부 Prologue 19청크)
+- ✅ 해설 RAG 파이프라인: router → query_rewriter → embed → search → generator (SSE)
+- ✅ Electron 셸 (`app/electron/`) — `cd app && npm run dev`로 통합 가동
+- ❌ HyDE — 폐기 (비용 대비 효과 미미)
+- 🟡 인터랙션 페르소나 sLLM 실 연결 — 잔여
+- 🟡 요약 sLLM (Ep 1 → Ep 2 카운드오버) 실 연결 — 잔여
+- 🟡 코퍼스 확장 (1부 22편) — 잔여
 
 ---
 
