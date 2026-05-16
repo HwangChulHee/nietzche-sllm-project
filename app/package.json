@@ -1,0 +1,20 @@
+{
+  "name": "nietzche-vn",
+  "version": "0.1.0",
+  "description": "차라투스트라와의 동행 — Electron wrapper",
+  "main": "electron/main.js",
+  "type": "commonjs",
+  "scripts": {
+    "ml": "node ml-backend/server.mjs",
+    "front": "cd frontend && npm run dev",
+    "electron": "electron .",
+    "electron:dev": "electron . --dev",
+    "electron:wait": "wait-on http://localhost:3000 && electron . --dev",
+    "dev": "concurrently -n ml,front,elec -c blue,green,magenta \"npm:ml\" \"npm:front\" \"npm:electron:wait\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "electron": "^33.0.0",
+    "wait-on": "^8.0.1"
+  }
+}
