@@ -31,7 +31,7 @@
 
 - **`app/`** (살아있음): Next.js 16 (`app/frontend/`) + Express ml-backend (`app/ml-backend/`, .mjs, llama.cpp 기반 해설 RAG) + Electron 셸 (`app/electron/`). 통합 가동은 `cd app && npm run dev`.
 - **`docs/vn/`** (단일 진실 소스): 작업 문서 8개. 진입점은 `VN_AGENTS.md`.
-- **`app/_archive_backend/`** — 옛 FastAPI 백엔드. archive됨 (폐기 노선).
+- **`archived/`** — 회고 자산. `archived/vn_fastapi/`는 Phase 2~8 VN-era FastAPI 백엔드(2026-05-16 archive). 구조 안내는 `archived/README.md` 참조.
 - **신규 디렉토리는 Phase별 산출물 정의에 따라 생성** (Phase 4의 `data/scenes/`, Phase 5의 `public/illustrations/` 등).
 
 ---
@@ -62,6 +62,6 @@
 
 ## 마지막 업데이트
 
-- 2026-05-16: `app/ml-backend` 통합 (옛 `nietzche-local` PoC 이주) + Electron 셸 + 해설 모드 llama.cpp 기반 RAG 실 연결. 옛 FastAPI 백엔드(`app/backend/`)는 `app/_archive_backend/`로 archive.
+- 2026-05-16: `app/ml-backend` 통합 (옛 `nietzche-local` PoC 이주) + Electron 셸 + 해설 모드 llama.cpp 기반 RAG 실 연결. 옛 FastAPI 백엔드(`app/backend/`)는 `archived/vn_fastapi/`로 archive.
 - 2026-05-01: Phase 1 완료. 옛 Track 1/2 컨텍스트를 비주얼 노벨 단일 미션 라우터로 교체.
 - 옛 컨텍스트는 `archived/CLAUDE_legacy.md` 참조.

@@ -25,7 +25,7 @@
 - **app/ml-backend/ 신설 (nietzche-local에서 이주)**:
   - 이주 파일: `router.mjs`, `query_rewriter.mjs`, `search.mjs`, `logger.mjs`, `prompts.mjs`, `build_index.mjs`, `multiturn_rag.mjs` (CLI 진입점 보존), `test_search.mjs`, `test_sqlitevec.mjs`, `prompts/` (commentary_system.md, query_rewriter.md, router.md), `data/` (interp/orig TSZ 1부 Prologue jsonl), `corpus.db` (80MB sqlite-vec 인덱스), `package.json`, `README.md`
   - **신규**: `server.mjs` — Express + SSE HTTP 래퍼, 비주얼 노벨 진입점
-- **app/backend/ → app/_archive_backend/ 이동**: 옛 FastAPI 백엔드 archive (폐기 노선)
+- **app/backend/ → archived/vn_fastapi/ 이동**: 옛 FastAPI 백엔드 archive (폐기 노선). (초기 통합 시점에는 `app/_archive_backend/`였고, 2026-05-16 후속 정리에서 저장소 루트 `archived/`로 이동.)
 - **frontend 환경변수**: `app/frontend/.env.local` 신설 — `NEXT_PUBLIC_API_BASE=http://localhost:3001`
 - **next.config.ts**: `turbopack.root` 명시 추가 (multi-lockfile 충돌 해결)
 - **타임아웃 상향**: `router.mjs` `DEFAULT_OPTS.timeoutMs` 5000 → 10000, `query_rewriter.mjs` 5000 → 8000
@@ -60,7 +60,6 @@ app/
 │   ├── prompts/ data/ test_*.mjs
 │   ├── corpus.db
 │   └── README.md
-├── _archive_backend/         [구 backend/, archive됨]
 └── frontend/
     ├── .env.local            [신규]
     └── next.config.ts        [변경: turbopack.root]

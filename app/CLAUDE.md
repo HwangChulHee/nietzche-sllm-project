@@ -23,10 +23,11 @@ app/
 ├── frontend/             # Next.js 16 — 비주얼 노벨 UI
 │   ├── CLAUDE.md         # 프론트 컴포넌트 + Redux 가이드
 │   └── README.md         # 실행/구조
-├── _archive_backend/     # 옛 FastAPI 백엔드 (archive됨, 폐기 노선)
 ├── README.md             # 통합 가동 / ml-backend 엔드포인트
 └── PROGRESS.md           # 4/13 중간 발표 회고 자산 (수정 금지)
 ```
+
+> 옛 FastAPI 백엔드는 저장소 루트 `archived/vn_fastapi/`로 이동됨 (2026-05-16). 아카이브 구조 안내는 `../archived/README.md`.
 
 ---
 
@@ -41,8 +42,7 @@ app/
 
 ## 절대 건드리지 말 것
 
-- `archived/` 안 파일 (회고 자산)
-- `_archive_backend/` 안 파일 (옛 FastAPI 백엔드, 폐기 노선)
+- `archived/` 안 파일 (회고 자산, `vn_fastapi/` 포함)
 - `app/PROGRESS.md` (4/13 중간 발표 회고)
 - `ml/` (`.claudeignore`로 차단)
 
@@ -53,4 +53,4 @@ app/
 - 옛 작업 지시서: `archived/CLAUDE_legacy.md`
 - 옛 README: `archived/README_legacy.md`
 - 옛 진행 회고: `app/PROGRESS.md` (보존)
-- 옛 FastAPI 백엔드 코드: `_archive_backend/`
+- 옛 FastAPI 백엔드 코드: `../archived/vn_fastapi/`

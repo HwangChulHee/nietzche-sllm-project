@@ -108,7 +108,7 @@ app/
 │   ├── lib/hooks/            # useInteraction, useExplain, useSave, useNavigate
 │   └── public/illustrations/ # WebP 일러스트 13장
 │
-└── _archive_backend/         # 옛 FastAPI 백엔드 (archive됨, 폐기 노선)
+└── (옛 FastAPI 백엔드는 저장소 루트 archived/vn_fastapi/로 이동됨)
 ```
 
 ---
@@ -158,4 +158,4 @@ app/
 - 옛 상담 챗봇 README: `archived/README_legacy.md`
 - 옛 작업 지시서: `archived/CLAUDE_legacy.md`
 - 옛 챗봇 UI 컴포넌트 / 프롬프트: `archived/components/`, `archived/prompts/`
-- 옛 FastAPI 백엔드: `_archive_backend/` (옛 chat 엔드포인트·SaveSlot·Alembic 등)
+- 옛 FastAPI 백엔드: `../archived/vn_fastapi/` (옛 chat 엔드포인트·SaveSlot·Alembic 등) — 아카이브 구조는 `../archived/README.md`

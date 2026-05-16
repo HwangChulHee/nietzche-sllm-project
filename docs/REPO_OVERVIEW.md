@@ -39,7 +39,7 @@
 - **해설 모드**: `app/ml-backend/server.mjs` (Node + Express, .mjs) → llama.cpp 서버 2개(chat :8000 / embed :8001) + sqlite-vec. 실 RAG 라이브.
 - **인터랙션 페르소나 / 요약 sLLM**: 미연결 (Phase 9 잔여). 프론트는 Mock 또는 정적 데이터로 동작.
 - **Electron 셸**: `app/electron/`이 `localhost:3000` 로드. 통합 가동은 `cd app && npm run dev`.
-- 옛 FastAPI 백엔드(`app/_archive_backend/`)와 옛 `LLM_MODE=mock|vllm` 토글은 폐기 노선.
+- 옛 FastAPI 백엔드(`archived/vn_fastapi/`)와 옛 `LLM_MODE=mock|vllm` 토글은 폐기 노선.
 
 ### 기술 — 책 삽화 레이아웃
 - 16:10 풀스크린 캔버스 + viewport 검은 letterbox.
@@ -101,17 +101,18 @@ nietzsche-project/
 │   │   ├── data/              # interp/orig TSZ 1부 Prologue jsonl
 │   │   └── corpus.db          # sqlite-vec 벡터 인덱스 (~80MB)
 │   │
-│   └── _archive_backend/      # 옛 FastAPI 백엔드 (archive됨, 폐기 노선)
-│       └── (옛 chat 엔드포인트 / SaveSlot / Alembic 등 회고용 보존)
+│   (옛 FastAPI 백엔드는 저장소 루트 archived/vn_fastapi/로 이동됨)
 │
 ├── demo/
 │   └── scenario_script.md     # 발표 시연 대본 (~10분)
 │
-├── archived/                  # 회고 자산 (수정 금지)
+├── archived/                  # 회고 자산 (수정 금지) — 구조는 archived/README.md
+│   ├── README.md              # 아카이브 디렉토리 안내 (시대별 구조)
 │   ├── README_legacy.md       # 옛 상담 챗봇 README
 │   ├── CLAUDE_legacy.md       # 옛 Track 1/2 분리 컨텍스트
-│   ├── components/            # 옛 챗봇 UI 컴포넌트
-│   └── prompts/               # 옛 페르소나 프롬프트
+│   ├── components/            # 옛 챗봇 UI 컴포넌트 (Phase 1)
+│   ├── prompts/               # 옛 페르소나 프롬프트 (Phase 1)
+│   └── vn_fastapi/            # Phase 2~8 VN-era FastAPI 백엔드 (2026-05-16 archive)
 │
 └── ml/                        # 회고 자산 (.claudeignore 차단, LoRA 어댑터 등)
 ```
@@ -130,7 +131,7 @@ nietzsche-project/
 | Chat LLM | Gemma 4 E2B Q4_K_M, llama.cpp 서버 (포트 8000) |
 | 임베딩 | BGE-M3 Q4_K_M, llama.cpp 서버 (포트 8001) |
 | 패키징 | Electron 셸 (`app/electron/`, `cd app && npm run dev`) |
-| 옛 스택 (archive) | FastAPI + SQLAlchemy + Alembic + PostgreSQL — `app/_archive_backend/` |
+| 옛 스택 (archive) | FastAPI + SQLAlchemy + Alembic + PostgreSQL — `archived/vn_fastapi/` |
 
 ---
 
@@ -148,7 +149,7 @@ SSE 이벤트 타입: `metadata` / `delta` / `done` / `error`. (`POST /api/v1/ex
 
 `/api/v1/explain` 파이프라인: `classify → COMMENTARY면 rewrite → embed → search → LLM stream` / OOD·AMB는 short-circuit.
 
-옛 8개 엔드포인트 FastAPI 구현은 `app/_archive_backend/api/v1/endpoints/` 참고용 보존.
+옛 8개 엔드포인트 FastAPI 구현은 `archived/vn_fastapi/api/v1/endpoints/` 참고용 보존.
 
 ---
 
@@ -195,10 +196,10 @@ SSE 이벤트 타입: `metadata` / `delta` / `done` / `error`. (`POST /api/v1/ex
 - `app/ml-backend/prompts/{router,query_rewriter,commentary_system}.md`
 
 ### "옛 FastAPI 엔드포인트 / 프롬프트 참조 (archive)"
-- `app/_archive_backend/api/v1/endpoints/` (respond / explain / summarize / save)
-- `app/_archive_backend/services/sllm_clients.py` (Persona/Explain/Summary ABC + Mock + VLLM)
-- `app/_archive_backend/services/mock_data.py` (옛 화면별 응답 풀)
-- `app/_archive_backend/prompts/{persona,explain,summary}_v1.txt`
+- `archived/vn_fastapi/api/v1/endpoints/` (respond / explain / summarize / save)
+- `archived/vn_fastapi/services/sllm_clients.py` (Persona/Explain/Summary ABC + Mock + VLLM)
+- `archived/vn_fastapi/services/mock_data.py` (옛 화면별 응답 풀)
+- `archived/vn_fastapi/prompts/{persona,explain,summary}_v1.txt`
 
 ### "발표 시연 / 대본 검토"
 - `demo/scenario_script.md` (사전 준비 + 발표 흐름 + 시연 포인트 매트릭스 + Q&A)
@@ -283,4 +284,4 @@ SSE 이벤트 타입: `metadata` / `delta` / `done` / `error`. (`POST /api/v1/ex
 ## 부록 — 변경 이력
 
 - 2026-05-01: 초안 작성. Phase 8 완료 시점 + 14개 커밋 origin/main 반영 시점.
-- 2026-05-16: 통합 작업 반영. RunPod/vLLM 트랙 폐기 → 윈도우 온디바이스 llama.cpp 트랙. ml-backend(Express, .mjs) + Electron 셸 통합 가동. 옛 FastAPI 백엔드는 `app/_archive_backend/`로 archive.
+- 2026-05-16: 통합 작업 반영. RunPod/vLLM 트랙 폐기 → 윈도우 온디바이스 llama.cpp 트랙. ml-backend(Express, .mjs) + Electron 셸 통합 가동. 옛 FastAPI 백엔드는 `archived/vn_fastapi/`로 archive.

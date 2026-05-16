@@ -34,7 +34,7 @@
 - LLM: Gemma 4 E2B Q4_K_M, llama.cpp 서버 (윈도우 온디바이스, 포트 8000)
 - 임베딩: BGE-M3 Q4_K_M, llama.cpp 서버 (포트 8001)
 - 패키징: Electron 셸 (`app/electron/`, `npm run dev`)
-- 옛 FastAPI 백엔드는 `app/_archive_backend/`로 archive됨 (폐기 노선)
+- 옛 FastAPI 백엔드는 `archived/vn_fastapi/`로 archive됨 (폐기 노선)
 
 **현재 단계**: 옛날 상담 챗봇 (`app/`, Phase 2 완료) → 비주얼 노벨로 전환 작업 시작.
 
@@ -189,14 +189,14 @@
 
 | 필요한 정보 | 파일 |
 |---|---|
-| 옛 FastAPI 백엔드 (Phase 2 산출물, archive됨) | `app/_archive_backend/` |
-| 옛 SSE 스트리밍 패턴 (FastAPI) | `app/_archive_backend/api/v1/endpoints/chat.py` |
-| 옛 DB 모델 (SaveSlot, Conversation 등) | `app/_archive_backend/models/` |
-| 옛 환경변수 schema | `app/_archive_backend/core/config.py` |
+| 옛 FastAPI 백엔드 (Phase 2 산출물, archive됨) | `archived/vn_fastapi/` |
+| 옛 SSE 스트리밍 패턴 (FastAPI) | `archived/vn_fastapi/api/v1/endpoints/chat.py` |
+| 옛 DB 모델 (SaveSlot, Conversation 등) | `archived/vn_fastapi/models/` |
+| 옛 환경변수 schema | `archived/vn_fastapi/core/config.py` |
 | 현행 통합 가동 / ml-backend 엔드포인트 | `app/README.md` |
 | 옛날 챗봇 UI 컴포넌트 | `archived/components/` |
 
-> 2026-05-16 이후 활성 백엔드는 `app/ml-backend/` (Node + Express, llama.cpp 기반 해설 RAG). `_archive_backend/`는 회고 자산.
+> 2026-05-16 이후 활성 백엔드는 `app/ml-backend/` (Node + Express, llama.cpp 기반 해설 RAG). 옛 FastAPI 구현은 `archived/vn_fastapi/`로 archive됨 (아카이브 구조: `archived/README.md`).
 
 ### 데이터 파이프라인 (이 작업과 무관 — 절대 건드리지 말 것)
 

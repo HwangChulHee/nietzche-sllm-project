@@ -176,7 +176,7 @@ npm run dev
 2026-05-16 통합 이후:
 - **해설 모드 RAG**: `app/ml-backend/server.mjs` (Express, .mjs) → llama-server(chat :8000) + BGE-M3(embed :8001) + sqlite-vec. `POST /api/v1/explain` SSE 라이브.
 - **인터랙션 페르소나 / 요약 sLLM**: 미연결 (Phase 9 잔여). 프론트는 화면별 자동 발화 + 학습자 발화 흐름의 시각 시퀀스만.
-- **옛 FastAPI + `LLM_MODE=mock|vllm` 토글**: 폐기 노선, `app/_archive_backend/`에 회고용 보존.
+- **옛 FastAPI + `LLM_MODE=mock|vllm` 토글**: 폐기 노선, `archived/vn_fastapi/`에 회고용 보존.
 
 ---
 

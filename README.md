@@ -83,18 +83,19 @@ nietzsche-project/
 │   │   ├── components/vn/    # 비주얼 노벨 컴포넌트
 │   │   ├── lib/              # hooks, store, api
 │   │   └── data/             # 정적 텍스트, 해설
-│   ├── ml-backend/           # Node + Express, llama.cpp 기반 해설 RAG
-│   │   ├── server.mjs        # SSE HTTP 래퍼 (포트 3001)
-│   │   ├── multiturn_rag.mjs # CLI (디버깅)
-│   │   ├── prompts/ data/    # 시스템 프롬프트 + 코퍼스
-│   │   └── corpus.db         # sqlite-vec 벡터 인덱스
-│   └── _archive_backend/     # 옛 FastAPI 백엔드 (archive됨, 폐기 노선)
+│   └── ml-backend/           # Node + Express, llama.cpp 기반 해설 RAG
+│       ├── server.mjs        # SSE HTTP 래퍼 (포트 3001)
+│       ├── multiturn_rag.mjs # CLI (디버깅)
+│       ├── prompts/ data/    # 시스템 프롬프트 + 코퍼스
+│       └── corpus.db         # sqlite-vec 벡터 인덱스
 │
-├── archived/                 # 회고 자산 (수정 금지)
+├── archived/                 # 회고 자산 (수정 금지) — 구조는 archived/README.md
+│   ├── README.md             # 아카이브 디렉토리 안내 (시대별 구조)
 │   ├── README_legacy.md      # 옛 상담 챗봇 README
 │   ├── CLAUDE_legacy.md      # 옛 Track 1/2 분리 컨텍스트
 │   ├── components/           # 옛 챗봇 UI 컴포넌트
-│   └── prompts/              # 옛 페르소나 프롬프트
+│   ├── prompts/              # 옛 페르소나 프롬프트
+│   └── vn_fastapi/           # Phase 2~8 VN-era FastAPI 백엔드 (2026-05-16 archive)
 │
 ├── demo/
 │   └── scenario_script.md    # 발표 시연 대본
